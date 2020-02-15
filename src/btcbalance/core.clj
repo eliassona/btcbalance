@@ -67,7 +67,7 @@
     {:open p, :date t, :market-cap 0, :close p, :volume 0, :high p, :low p}))
   
 
-(def raw-btc-price (concat (map make-compatible (historical-price (days-missing))) raw-btc-price))
+(def raw-btc-price(concat (map make-compatible (historical-price (days-missing))) raw-btc-price))
 
 (defn last-of [ix n]
   (take n (drop ix raw-btc-price)))
@@ -79,12 +79,23 @@
 
 (defn mayer-multiple-of [ix] (/ (-> raw-btc-price (nth ix) :close) (moving-average-of ix 200)))
 
-(def mayer-multiples
+(def mayer-multiples 
   (map (fn [ix] {:date (-> raw-btc-price (nth ix) :date) :mm (mayer-multiple-of ix)}) (range (- (count raw-btc-price) 200))))
 
-(def average-multiple 
+(defn average-multiple []
   (/ (reduce + (map :mm mayer-multiples)) (count mayer-multiples)))
 
 
+(defn buy-btc? [] (< (mayer-multiple-of 0) (average-multiple)))
+  
 
+(defn growth [value percent n]
+  (let [pc (+ 1 (/ percent 100))]
+    (loop [value value
+           n n]
+      (if (> n 0)
+        (recur (* pc value) (dec n))
+        (double value)))))
+
+(String/format "You should %s buy btc" (if (buy-btc?) "" "not"))
 
