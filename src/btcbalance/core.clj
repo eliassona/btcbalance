@@ -66,8 +66,22 @@
         p (:price m)]
     {:open p, :date t, :market-cap 0, :close p, :volume 0, :high p, :low p}))
   
+(defn growth [value percent n]
+  (let [pc (+ 1 (/ percent 100))]
+    (loop [value value
+           n n]
+      (if (> n 0)
+        (recur (* pc value) (dec n))
+        (double value)))))
 
-(def raw-btc-price(concat (map make-compatible (historical-price (days-missing))) raw-btc-price))
+(defn to-proper-format [l]
+  (apply hash-map (parse-it l)))
+  
+
+#_(def raw-btc-price 
+   (concat (map make-compatible (historical-price (days-missing))) (dbg raw-btc-price)))
+(def raw-btc-price 
+  (concat (map to-proper-format (partition 7 (.split (slurp (clojure.java.io/resource "tmpbtcprice")) "\n"))) raw-btc-price))
 
 (defn last-of [ix n]
   (take n (drop ix raw-btc-price)))
@@ -76,6 +90,21 @@
 (defn moving-average-of [ix n] 
   (/ (reduce + (map :close (last-of ix n))) n))
 
+(defn moving-averages-of 
+  "Get all n moving averages from ix going back in time back-in-days"
+  [ix n back-in-days] 
+  (map (fn [x] (moving-average-of x n)) (range back-in-days)))
+
+(defn rising? [data]
+  (loop [l data
+         v 0]
+    (if (empty? l)
+      true
+      (if (> (first l) v)
+        (recur (rest l) (first l))
+        false))))
+      
+  
 
 (defn mayer-multiple-of [ix] (/ (-> raw-btc-price (nth ix) :close) (moving-average-of ix 200)))
 
@@ -89,13 +118,11 @@
 (defn buy-btc? [] (< (mayer-multiple-of 0) (average-multiple)))
   
 
-(defn growth [value percent n]
-  (let [pc (+ 1 (/ percent 100))]
-    (loop [value value
-           n n]
-      (if (> n 0)
-        (recur (* pc value) (dec n))
-        (double value)))))
 
-(String/format "You should %s buy btc" (if (buy-btc?) "" "not"))
+
+(String/format "You should %s buy btc!" (into-array String [(if (buy-btc?) "" "not")]))
+
+
+
+
 
