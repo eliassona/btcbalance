@@ -120,7 +120,7 @@
 
 
 
-(String/format "You should %s buy btc!" (into-array String [(if (buy-btc?) "" "not")]))
+(String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
 
 
 
