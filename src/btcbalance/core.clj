@@ -3,6 +3,7 @@
   (:require [bchain.core :refer [dbg rawaddr SEK SEK-last USD USD-last satoshi blocks historical-price]]
             [bchain.shape :as ss]
             [bchain.balance :refer [convert balance def-balance total-balance convert-to store! all-balance store-proc]]
+            [clj-ldap.client :as ldap]
             )
   (:import [java.net URL]
            [java.text SimpleDateFormat]))
