@@ -139,7 +139,7 @@
 
 (defn growth-fn [factor acc v]
   (let [[v y] (first acc)]
-    (cons [(* factor v) (inc y)] acc))) 
+    (cons [(Math/round (double (* factor v))) (inc y)] acc))) 
   
 
 (defn growth [value percent years]
@@ -152,30 +152,68 @@
 
 (def btc-usd-price [[0.11 2010][20.96 2011][10.89 2012]
                        [101.95 2013][592 2014][244 2015]
-                       [764 2016][2942 2017][6164 2018]
+                       [764 2016][1200 2017][6164 2018]
                        [8036 2019][9480 2020][35850 2021]
                        [20473 2022][26505 2023][65000 2024]])
 (def btc-usd-year-map (apply merge (map (fn [[v y]] {y v}) btc-usd-price))) 
 
-(def usd-sek [[7.84 2010][6.4 2011][6.99 2012]
+(def usd-sek [[7.36 2003][7.44 2004][7.30 2005]
+              [7.33 2006][7.04 2007][6.08 2008]
+              [7.81 2009]
+              [7.84 2010][6.4 2011][6.99 2012]
               [2.56 2013][6.63 2014][8.29 2015]
               [8.33 2016][8.71 2017][8.71 2018]
               [9.54 2019][9.32 2020][8.26 2021]
               [9.54 2022][10.8 2023][10.52 2024]])
 
+(def chf-sek 
+  [[5.78 2003][5.94 2004][6.09 2005]
+   [5.95 2006][5.67 2007][5.8 2008]
+   [6.89 2009][7.04 2010][7.76 2011]
+   [7.35 2012][6.98 2013][7.41 2014]
+   [8.91 2015][8.7 2016][8.99 2017]
+   [8.81 2018][9.49 2019][9.95 2020]
+   [9.33 2021][10.15 2022][11.99 2023]
+   [11.76 2024]
+   ]
+  )
+
 (def usd-sek-year-map (apply merge (map (fn [[v y]] {y v}) usd-sek))) 
+(def chf-sek-year-map (apply merge (map (fn [[v y]] {y v}) chf-sek))) 
 
-(def btc-sek-price-map (apply merge (map (fn [[v y]] {y (* v (get btc-usd-year-map y))}) usd-sek)))
+(def btc-sek-price-map (apply merge 
+                              (map 
+                                (fn [[v y]] 
+                                  {y 
+                                   (when-let [x (get btc-usd-year-map y)] (* v x))}) 
+                                usd-sek)))
 
-(def kardborrevagen-btc-price
-  (let [v (reverse (map (fn [[v y]] [v (+ 2003 y)]) (growth 2.5e6 5.5 21)))]
+
+(def house-price-sek (reverse (map (fn [[v y]] [v (+ 2003 y)]) (growth 2.5e6 5.5 21))))
+
+(def house-price-btc
     (map 
       (fn [[v y]]
-        (if-let [x (dbg (get btc-sek-price-map y))]
-          [(/ v x) y]
+        (if-let [x (get btc-sek-price-map y)]
+          [(Math/round (/ v x)) y]
           [nil y])) 
-        v)
-    ))
+        house-price-sek))
+
+(def house-price-usd
+    (map 
+      (fn [[v y]]
+        (if-let [x (get usd-sek-year-map y)]
+          [(Math/round (/ v x)) y]
+          [nil y])) 
+        house-price-sek))
+
+(def house-price-chf
+    (map 
+      (fn [[v y]]
+        (if-let [x (get chf-sek-year-map y)]
+          [(Math/round (/ v x)) y]
+          [nil y])) 
+        house-price-sek))
 
 
 (String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
