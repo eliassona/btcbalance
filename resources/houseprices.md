@@ -52,35 +52,6 @@ To re-evaluate, we calculate the CAGR for house prices in SEK, USD, and CHF from
 - **Bitcoin**:
   \[ \text{CAGR}_{\text{BTC}} = \left( \frac{11}{4,216,950} \right)^{\frac{1}{14}} - 1 \approx -42.1\% \]
 
-### Performance of Housing Prices Relative to Gold and Bitcoin:
-
-Given that house prices in nominal terms have increased but decreased when measured against gold and Bitcoin, we need to understand the effective depreciation of SEK, USD, and CHF in terms of purchasing power.
-
-#### Calculating Inflation Rates:
-
-1. **SEK Inflation**:
-   - **Relative to Gold**:
-     \[ \text{Inflation}_{SEK} = \text{CAGR}_{SEK} - (-5.1\%) = 6.06\% + 5.1\% = 11.16\% \]
-   - **Relative to Bitcoin**:
-     \[ \text{Inflation}_{SEK} = \text{CAGR}_{SEK} - (-42.1\%) = 6.06\% + 42.1\% = 48.16\% \]
-   - **Average Estimate**:
-     \[ \text{Average Inflation}_{SEK} \approx 29.66\% \]
-
-2. **USD Inflation**:
-   - **Relative to Gold**:
-     \[ \text{Inflation}_{USD} = \text{CAGR}_{USD} - (-5.1\%) = 4.76\% + 5.1\% = 9.86\% \]
-   - **Relative to Bitcoin**:
-     \[ \text{Inflation}_{USD} = \text{CAGR}_{USD} - (-42.1\%) = 4.76\% + 42.1\% = 46.86\% \]
-   - **Average Estimate**:
-     \[ \text{Average Inflation}_{USD} \approx 28.36\% \]
-
-3. **CHF Inflation**:
-   - **Relative to Gold**:
-     \[ \text{Inflation}_{CHF} = \text{CAGR}_{CHF} - (-5.1\%) = 2.07\% + 5.1\% = 7.17\% \]
-   - **Relative to Bitcoin**:
-     \[ \text{Inflation}_{CHF} = \text{CAGR}_{CHF} - (-42.1\%) = 2.07\% + 42.1\% = 44.17\% \]
-   - **Average Estimate**:
-     \[ \text{Average Inflation}_{CHF} \approx 25.67\% \]
 
 ### Conclusions:
 
