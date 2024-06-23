@@ -155,13 +155,24 @@
                        [764 2016][1200 2017][6164 2018]
                        [8036 2019][9480 2020][35850 2021]
                        [20473 2022][26505 2023][65000 2024]])
+
+(def gold-usd [[360 2003][393.9 2004][416.4 2005]
+               [642.8 2006][661.5 2007][887.3 2008]
+               [978.8 2009][1224.8 2010][1535.7 2011]
+               [1560 2012][1389.1 2013][1250 2014]
+               [1190.6 2015][1215.7 2016][1268 2017]
+               [1298.6 2018][1307 2019][1740.4 2020]
+               [1905.1 2021][1831 2022][1963.2 2023]
+               [2322.6 2024]
+])
+
 (def btc-usd-year-map (apply merge (map (fn [[v y]] {y v}) btc-usd-price))) 
 
 (def usd-sek [[7.36 2003][7.44 2004][7.30 2005]
               [7.33 2006][7.04 2007][6.08 2008]
               [7.81 2009]
               [7.84 2010][6.4 2011][6.99 2012]
-              [2.56 2013][6.63 2014][8.29 2015]
+              [6.43 2013][6.63 2014][8.29 2015]
               [8.33 2016][8.71 2017][8.71 2018]
               [9.54 2019][9.32 2020][8.26 2021]
               [9.54 2022][10.8 2023][10.52 2024]])
@@ -180,6 +191,7 @@
 
 (def usd-sek-year-map (apply merge (map (fn [[v y]] {y v}) usd-sek))) 
 (def chf-sek-year-map (apply merge (map (fn [[v y]] {y v}) chf-sek))) 
+(def gold-usd-year-map (apply merge (map (fn [[v y]] {y v}) gold-usd))) 
 
 (def btc-sek-price-map (apply merge 
                               (map 
@@ -206,6 +218,14 @@
           [(Math/round (/ v x)) y]
           [nil y])) 
         house-price-sek))
+
+(def house-price-gold
+    (map 
+      (fn [[v y]]
+        (if-let [x (get gold-usd-year-map y)]
+          [(Math/round (float (/ v x))) y]
+          [nil y])) 
+        house-price-usd))
 
 (def house-price-chf
     (map 
