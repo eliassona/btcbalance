@@ -146,6 +146,19 @@
   (let [factor (+ 1 (/ percent 100))]
     (reduce (partial growth-fn factor) [[value 0]] (range years)))) 
   
+(defn cagr-of [start end years]
+  (let [diff (- end start)
+        step (cond (= diff 0) 0
+                   (> diff 0) 0.1
+                   :else -0.1)]
+    (if (= step 0)
+      0
+      (loop [percent step]
+        (let [end-value (-> (growth start percent years) first first)]
+          (if (> end-value end)
+            percent
+            (recur (+ percent 0.1))))))))
+
 (defn passive-net-income [fortune percent]
   (* 0.7 (/ (- (growth fortune percent 1) fortune) 12)))
 
@@ -237,4 +250,3 @@
 
 
 (String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
-

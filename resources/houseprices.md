@@ -3,7 +3,7 @@
 ### Note:
 **The housing prices presented are based on data from a typical house in the Stockholm area. These figures use the actual start price in 2003 and the end price in 2024, with intervening years' prices calculated assuming linear growth. This illustrative model does not reflect the exact historical prices.**
 
-### Consolidated Table of Housing Prices and Gold Prices
+### Consolidated Table of Housing Prices and Gold and Bitcoin Prices
 
 | Year | Price (SEK) | Price (USD) | Price (CHF) | Price (BTC) | Gold Price (USD) |
 |------|-------------|-------------|-------------|-------------|------------------|
