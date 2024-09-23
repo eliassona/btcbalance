@@ -1,13 +1,17 @@
 (ns btcbalance.ledger
   (:require [btcbalance.core :refer [growth dbg]]
-           [bchain.core :refer [EUR-last SEK SEK-last USD USD-last satoshi]])
+           [bchain.core :refer [EUR-last SEK SEK-last USD USD-last satoshi]]
+           [clojure.string :as str]
+           [clojure.data.json :as json]
+           )
   (:import [java.util Date]
            [java.io File]
            [java.time OffsetDateTime LocalDateTime ZoneId]
            [java.time.format DateTimeFormatter]))
 
 (defn sek-usd-rate [] (/ (SEK-last) (USD-last)))
-
+(defn split-csv [csv-string]
+  (json/read-str (str "[" csv-string "]")))
 
 (def dir (File. ""))
 
@@ -20,7 +24,7 @@
    :date (Date. (read-string (nth values 14)))
    :network-fee (nth values 13)}))
 
-(def btcx-orders 
+(defn btcx-orders []
   (map btcx-value-date
     (filter (fn [v] (= (nth v 20) "COMPLETED"))    
       (map 
@@ -42,7 +46,7 @@
    :date (string-to-date (nth values 6))
   }))
 
-(def safello-orders
+(defn safello-orders []
   (map
     safello-value-date
     (filter 
@@ -81,15 +85,40 @@
         #(.split % ",")
         (rest (.split (slurp filename) "\n"))))))
 
-(def trijo-orders
+(defn trijo-orders []
   (apply concat (map trijo-orders-of trijo-files)))
 
-(def total-orders
-  (apply concat [trijo-orders safello-orders btcx-orders]))
+(defn total-orders []
+  (apply concat [(trijo-orders) (safello-orders) (btcx-orders)]))
 
-(defn total-sek-spent [] (apply + (map :sek total-orders)))
+(defn total-sek-spent [] (apply + (map :sek (total-orders))))
 
-(defn total-btc [] (apply + (map :btc total-orders)))
+(defn total-btc [] (apply + (map :btc (total-orders))))
 
 (defn total-sek [] (* (SEK-last) (total-btc)))
+
+
+
+(defn trijo-deposit-date [values]
+  {
+   :date (trijo-string-to-date (nth values 1))
+   :eur (read-string (apply str (.split (nth values 4) ",")))
+   })
+
+
+
+(defn deposit? [values]
+  (and 
+    (= (nth values 2) "INSÄTTNING") 
+    (= (nth values 7) "GENOMFÖRD")))
+
+(defn trijo-deposits-of [filename]
+  (let [values (map #(split-csv % ) (rest (.split (slurp filename) "\n")))
+        values (filter deposit? values)]
+    (map
+      trijo-deposit-date
+        values)))
+
+(defn trijo-deposits []
+  (apply concat (map trijo-deposits-of trijo-files)))
 
