@@ -3,8 +3,10 @@
            [bchain.core :refer [EUR-last SEK SEK-last USD USD-last satoshi]]
            [clojure.string :as str]
            [clojure.data.json :as json]
+           [clojure.xml :as xml]
            )
   (:import [java.util Date]
+           [java.text SimpleDateFormat]
            [java.io File]
            [java.time OffsetDateTime LocalDateTime ZoneId]
            [java.time.format DateTimeFormatter]))
@@ -56,8 +58,11 @@
         (rest (.split (slurp (File. dir "safello.csv")) "\n"))))))
 
 
-(defn eur->sek [v]
+(defn eur->sek ([v]
   (* v (/ (SEK-last) (EUR-last))))
+  ([v date]
+    (dbg date)
+    (eur->sek v)));TODO get eur->sek rate for this date
 
 (defn trijo-string-to-date [date-string]
   (let [formatter (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
@@ -66,12 +71,13 @@
     (Date/from (.toInstant (.atZone local-date-time zone-id)))))
 
 (defn trijo-value-date [values]
-  (let [sek (eur->sek (read-string (read-string (nth values 7)))) ;TODO get eur->sek rate for this date
+  (let [date (trijo-string-to-date (read-string (nth values 1)))
+        sek (eur->sek (read-string (read-string (nth values 7))) date) 
         btc (read-string (read-string (nth values 4)))]
   {:sek sek
    :btc btc
    :sek->btc (double (/ sek btc))
-   :date (trijo-string-to-date (read-string (nth values 1)))
+   :date date
   }))
 
 (def trijo-files (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
@@ -98,10 +104,25 @@
 (defn total-sek [] (* (SEK-last) (total-btc)))
 
 
+(def eur->sek-historical-rates-map 
+  (into 
+    {} 
+    (map 
+      (fn [m] 
+        (let [attrs (:attrs m)]
+          [(:TIME_PERIOD attrs)
+          (read-string (:OBS_VALUE attrs))]
+           ))
+      (:content (second (:content (second (:content (xml/parse (File. dir "eur-sek.xml"))))))))))
+
+(def date-formatter (SimpleDateFormat. "yyyy-MM-dd"))
+
+(defn date->string [date]
+  (.format date-formatter date))
 
 (defn trijo-deposit-date [values]
   {
-   :date (trijo-string-to-date (nth values 1))
+   :date (date->string (trijo-string-to-date (nth values 1)))
    :eur (read-string (apply str (.split (nth values 4) ",")))
    })
 
