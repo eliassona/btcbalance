@@ -9,4 +9,5 @@
                  [clj-twilio "0.2.0"]
                  [org.clojure/data.json "0.2.4"]
                  [com.draines/postal "2.0.2"]
-                 [org.clojure/tools.nrepl "0.2.13"]])
+                 [org.clojure/tools.nrepl "0.2.13"]]
+  :java-source-paths ["java/src"])

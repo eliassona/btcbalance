@@ -9,13 +9,30 @@
            [java.text SimpleDateFormat]
            [java.io File]
            [java.time OffsetDateTime LocalDateTime ZoneId]
-           [java.time.format DateTimeFormatter]))
+           [java.time.format DateTimeFormatter]
+           [btcbalance HistoricalRate]))
+(def dir (File. (System/getProperty "user.home") "btcorders"))
+
+;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
+(def eur->sek-historical-rates-map
+  (into 
+    {}
+    (let [formatter (SimpleDateFormat. "yyyy-MM-dd")]
+      (map 
+        (fn [m] 
+          (let [attrs (:attrs m)]
+            [(:TIME_PERIOD attrs)
+            (read-string (:OBS_VALUE attrs))]
+             ))
+        (:content (second (:content (second (:content (xml/parse (File. dir "eur-sek.xml")))))))))))
+
 
 (defn sek-usd-rate [] (/ (SEK-last) (USD-last)))
 (defn split-csv [csv-string]
   (json/read-str (str "[" csv-string "]")))
 
-(def dir (File. ""))
+
+;btcx orders
 
 (defn btcx-value-date [values]
   (let [sek (read-string (first values))
@@ -33,6 +50,9 @@
         #(.split % ",") 
         (rest (.split (slurp (File. dir "btcx.csv")) "\n")))
   )))
+
+
+;safello orders
 
 (defn string-to-date [date-string]
   (let [formatter (DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ssZ")
@@ -58,11 +78,12 @@
         (rest (.split (slurp (File. dir "safello.csv")) "\n"))))))
 
 
-(defn eur->sek ([v]
-  (* v (/ (SEK-last) (EUR-last))))
-  ([v date]
-    (dbg date)
-    (eur->sek v)));TODO get eur->sek rate for this date
+;trijo deposits
+
+(def date-formatter (SimpleDateFormat. "yyyy-MM-dd"))
+
+(defn date->string [date]
+  (.format date-formatter date))
 
 (defn trijo-string-to-date [date-string]
   (let [formatter (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
@@ -70,63 +91,12 @@
         zone-id (ZoneId/systemDefault)]  ;; You can change this to another timezone if needed
     (Date/from (.toInstant (.atZone local-date-time zone-id)))))
 
-(defn trijo-value-date [values]
-  (let [date (trijo-string-to-date (read-string (nth values 1)))
-        sek (eur->sek (read-string (read-string (nth values 7))) date) 
-        btc (read-string (read-string (nth values 4)))]
-  {:sek sek
-   :btc btc
-   :sek->btc (double (/ sek btc))
-   :date date
-  }))
-
-(def trijo-files (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
-
-(defn trijo-orders-of [filename]
-  (map
-    trijo-value-date
-    (filter 
-      #(and (= (read-string (nth % 2)) "ordrar") (= (read-string (nth % 8)) "GENOMFÖRD"))
-      (map 
-        #(.split % ",")
-        (rest (.split (slurp filename) "\n"))))))
-
-(defn trijo-orders []
-  (apply concat (map trijo-orders-of trijo-files)))
-
-(defn total-orders []
-  (apply concat [(trijo-orders) (safello-orders) (btcx-orders)]))
-
-(defn total-sek-spent [] (apply + (map :sek (total-orders))))
-
-(defn total-btc [] (apply + (map :btc (total-orders))))
-
-(defn total-sek [] (* (SEK-last) (total-btc)))
-
-
-(def eur->sek-historical-rates-map 
-  (into 
-    {} 
-    (map 
-      (fn [m] 
-        (let [attrs (:attrs m)]
-          [(:TIME_PERIOD attrs)
-          (read-string (:OBS_VALUE attrs))]
-           ))
-      (:content (second (:content (second (:content (xml/parse (File. dir "eur-sek.xml"))))))))))
-
-(def date-formatter (SimpleDateFormat. "yyyy-MM-dd"))
-
-(defn date->string [date]
-  (.format date-formatter date))
 
 (defn trijo-deposit-date [values]
   {
-   :date (date->string (trijo-string-to-date (nth values 1)))
+   :date (trijo-string-to-date (nth values 1))
    :eur (read-string (apply str (.split (nth values 4) ",")))
    })
-
-
 
 (defn deposit? [values]
   (and 
@@ -139,7 +109,56 @@
     (map
       trijo-deposit-date
         values)))
+(def trijo-files (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
 
 (defn trijo-deposits []
-  (apply concat (map trijo-deposits-of trijo-files)))
+  (sort-by :date (apply concat (map trijo-deposits-of trijo-files))))
+
+(def depo-date (HistoricalRate. (trijo-deposits)))  
+
+(defn eur->sek ([v]
+  (* v (/ (SEK-last) (EUR-last))))
+  ([v date]
+    (get eur->sek-historical-rates-map (date->string (.depoDateOf depo-date date)))
+    (eur->sek v)))
+
+;trijo orders
+
+
+
+
+
+(defn trijo-value-date [values]
+  (let [date (trijo-string-to-date (read-string (nth values 1)))
+        sek (eur->sek (read-string (read-string (nth values 7))) date) 
+        btc (read-string (read-string (nth values 4)))]
+  {:sek sek
+   :btc btc
+   :sek->btc (double (/ sek btc))
+   :date date
+  }))
+
+
+(defn trijo-orders-of [filename]
+  (map
+    trijo-value-date
+    (filter 
+      #(and (= (read-string (nth % 2)) "ordrar") (= (read-string (nth % 8)) "GENOMFÖRD"))
+      (map 
+        #(.split % ",")
+        (rest (.split (slurp filename) "\n"))))))
+
+(defn trijo-orders []
+  (sort-by :date (apply concat (map trijo-orders-of trijo-files))))
+
+(defn total-orders []
+  (sort-by :date (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
+
+(defn total-sek-spent [] (apply + (map :sek (total-orders))))
+
+(defn total-btc [] (apply + (map :btc (total-orders))))
+
+(defn total-sek [] (* (SEK-last) (total-btc)))
+
+
 
