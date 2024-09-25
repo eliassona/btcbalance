@@ -131,27 +131,28 @@
 
 
 (defn trijo-value-date [values]
-  (let [date (trijo-string-to-date (read-string (nth values 1)))
-        sek (eur->sek (read-string (read-string (nth values 7))) date) 
-        btc (read-string (read-string (nth values 4)))]
-  {:sek sek
+  (let [
+        date (trijo-string-to-date (nth values 1))
+        sek (eur->sek (read-string (nth values 6)) date) 
+        btc (read-string (nth values 4))
+        ]
+  {
+   :sek sek
    :btc btc
    :sek->btc (double (/ sek btc))
    :date date
   }))
 
 
-(defn trijo-orders-of [filename]
+(defn trijo-orders-of [values]
   (map
     trijo-value-date
     (filter 
-      #(and (= (read-string (nth % 2)) "ordrar") (= (read-string (nth % 8)) "GENOMFÖRD"))
-      (map 
-        #(.split % ",")
-        (rest (.split (slurp filename) "\n"))))))
+      #(and (= (nth % 2) "ordrar") (= (nth % 7) "GENOMFÖRD"))
+      values)))
 
 (defn trijo-orders []
-  (sort-by :date (apply concat (map trijo-orders-of trijo-files))))
+  (sort-by :date (apply concat (map trijo-orders-of trijo-split-values))))
 
 (defn foreign-orders []
   (safello-orders "foreign.csv"))
