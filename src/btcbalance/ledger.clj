@@ -68,14 +68,16 @@
    :date (string-to-date (nth values 6))
   }))
 
-(defn safello-orders []
+(defn safello-orders 
+  ([filename]
   (map
     safello-value-date
     (filter 
       #(= (nth % 5) "completed")
       (map 
         #(.split % ";")
-        (rest (.split (slurp (File. dir "safello.csv")) "\n"))))))
+        (rest (.split (slurp (File. dir filename)) "\n"))))))
+  ([] (safello-orders "safello.csv")))
 
 
 ;trijo deposits
@@ -151,8 +153,12 @@
 (defn trijo-orders []
   (sort-by :date (apply concat (map trijo-orders-of trijo-files))))
 
+(defn foreign-orders []
+  (safello-orders "foreign.csv"))
+
+
 (defn total-orders []
-  (sort-by :date (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
+  (sort-by :date (apply concat [(foreign-orders) (trijo-orders) (safello-orders) (btcx-orders)])))
 
 (defn total-sek-spent [] (apply + (map :sek (total-orders))))
 
