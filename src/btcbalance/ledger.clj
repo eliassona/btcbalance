@@ -106,7 +106,9 @@
     (= (nth values 7) "GENOMFÖRD")))
 
 (def trijo-files (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
-(def trijo-split-values (map #(map split-csv (rest (.split (slurp %) "\n"))) trijo-files))
+(def trijo-split-values (apply 
+                          concat 
+                          (map #(map split-csv (rest (.split (slurp %) "\n"))) trijo-files)))
 
 (defn trijo-deposits-of [values]
   (let [values (filter deposit? values)]
@@ -114,7 +116,7 @@
 
 
 (defn trijo-deposits []
-  (sort-by :date (apply concat (map trijo-deposits-of trijo-split-values))))
+  (sort-by :date (trijo-deposits-of trijo-split-values)))
 
 (def depo-date (HistoricalRate. (trijo-deposits)))  
 
@@ -152,7 +154,7 @@
       values)))
 
 (defn trijo-orders []
-  (sort-by :date (apply concat (map trijo-orders-of trijo-split-values))))
+  (sort-by :date (trijo-orders-of trijo-split-values)))
 
 (defn foreign-orders []
   (safello-orders "foreign.csv"))
