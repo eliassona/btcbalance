@@ -42,7 +42,9 @@
    :sek->btc (double (/ sek btc))
    :date (Date. (read-string (nth values 14)))
    :network-fee (nth values 13)
-   :exchange :btcx}))
+   :exchange :btcx
+   :id (nth values 14)
+   }))
 
 (defn btcx-orders []
   (map btcx-value-date
@@ -68,6 +70,7 @@
    :sek->btc (double (/ sek btc))
    :date (string-to-date (nth values 6))
    :exchange :safello
+   :id (first values)
   }))
 
 (defn safello-orders 
@@ -163,7 +166,7 @@
 (defn trijo-value-date [values]
   (let [
         date (trijo-string-to-date (nth values 1))
-        sek (dbg (eur->sek (dbg (parse-value-with-commas (dbg (nth values 6)))) date)) 
+        sek (eur->sek (parse-value-with-commas (nth values 6)) date) 
         btc (read-string (nth values 4))
         ]
     
@@ -173,6 +176,7 @@
    :sek->btc (double (/ sek btc))
    :date date
    :exchange :trijo
+   :id (first values)
   }))
 
 
@@ -190,14 +194,35 @@
   (safello-orders "foreign.csv"))
 
 
-(defn total-orders []
+(def total-orders 
   (sort-by :sek->btc (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
 
-(defn total-sek-spent [] (apply + (map :sek (total-orders))))
+(defn total-sek-spent [] (apply + (map :sek total-orders)))
 
-(defn total-btc [] (apply + (map :btc (total-orders))))
+(defn total-btc [] (apply + (map :btc total-orders)))
 
 (defn total-sek [] (* (SEK-last) (total-btc)))
 
+(defn calc-profit-loss [curr-sek->btc-rate m]
+  (let [btc (:btc m)
+        rate (:sek->btc m)]
+    (- (* btc curr-sek->btc-rate) (* btc rate))))
 
+(defn get-txs-in-loss []
+  (let [the-fn (partial calc-profit-loss (SEK-last))]
+    (filter (fn [m] (neg? (the-fn m))) total-orders)))
+
+(defn txs-in-profit-of [value-in-btc]
+  (loop [sum-in-btc 0
+         orders-in-profit []
+         values total-orders]
+    (if (and (< sum-in-btc value-in-btc) (not (empty? values)))
+      (recur (+ sum-in-btc (dbg (-> values first :btc))) 
+             (conj orders-in-profit (first values)) 
+             (rest values))
+      orders-in-profit)))
+
+
+
+(assert (= (count (set (map :id total-orders))) (count total-orders)) "Error, ids are not unique")
 
