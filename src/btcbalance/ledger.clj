@@ -217,7 +217,7 @@
          orders-in-profit []
          values total-orders]
     (if (and (< sum-in-btc value-in-btc) (not (empty? values)))
-      (recur (+ sum-in-btc (dbg (-> values first :btc))) 
+      (recur (+ sum-in-btc (-> values first :btc)) 
              (conj orders-in-profit (first values)) 
              (rest values))
       orders-in-profit)))
@@ -225,4 +225,11 @@
 
 
 (assert (= (count (set (map :id total-orders))) (count total-orders)) "Error, ids are not unique")
+
+(def t-file (clojure.java.io/resource "t.txt"))
+
+(def data (atom (read-string (slurp t-file))))
+
+(defn save! []
+  (spit t-file (pr-str @data)))
 
