@@ -41,7 +41,8 @@
    :btc btc
    :sek->btc (double (/ sek btc))
    :date (Date. (read-string (nth values 14)))
-   :network-fee (nth values 13)}))
+   :network-fee (nth values 13)
+   :exchange :btcx}))
 
 (defn btcx-orders []
   (map btcx-value-date
@@ -66,6 +67,7 @@
    :btc btc
    :sek->btc (double (/ sek btc))
    :date (string-to-date (nth values 6))
+   :exchange :safello
   }))
 
 (defn safello-orders 
@@ -94,10 +96,13 @@
     (Date/from (.toInstant (.atZone local-date-time zone-id)))))
 
 
+(defn parse-value-with-commas [v]
+  (read-string (apply str (.split v ","))))
+
 (defn trijo-deposit-date [values]
   {
    :date (trijo-string-to-date (nth values 1))
-   :eur (read-string (apply str (.split (nth values 4) ",")))
+   :eur (parse-value-with-commas (nth values 4))
    })
 
 (defn deposit? [values]
@@ -115,16 +120,39 @@
     (map trijo-deposit-date values)))
 
 
-(defn trijo-deposits []
+(def trijo-deposits
   (sort-by :date (trijo-deposits-of trijo-split-values)))
 
-(def depo-date (HistoricalRate. (trijo-deposits)))  
+(def depo-date (HistoricalRate. trijo-deposits))  
+
+
+(defn deposit-date-of [order-date]
+  (let [order-date-in-ms (.getTime order-date)]
+    (loop [
+           depo (-> trijo-deposits first :date)
+           rest-deposits (rest trijo-deposits)]
+      (if-let [curr (-> rest-deposits first :date)]
+        (if (> order-date-in-ms (.getTime curr))
+          (recur curr (rest rest-deposits))
+          depo)
+        depo))))
+
+(defn str->date [date-str]
+  (let [date-formatter (SimpleDateFormat. "yyyy-MM-dd")]
+    (.parse date-formatter date-str)))
+
+(def day-in-ms (* 24 3600 1000))
+
+(defn eur->sek-rate-of [date]
+  (if-let [rate (get eur->sek-historical-rates-map (date->string date))]
+    rate
+    (eur->sek-rate-of (Date. (- (.getTime date) day-in-ms)))))
 
 (defn eur->sek ([v]
   (* v (/ (SEK-last) (EUR-last))))
   ([v date]
-    (get eur->sek-historical-rates-map (date->string (.depoDateOf depo-date date)))
-    (eur->sek v)))
+    (* v (eur->sek-rate-of (deposit-date-of date)))
+    #_(eur->sek v)))
 
 ;trijo orders
 
@@ -135,14 +163,16 @@
 (defn trijo-value-date [values]
   (let [
         date (trijo-string-to-date (nth values 1))
-        sek (eur->sek (read-string (nth values 6)) date) 
+        sek (dbg (eur->sek (dbg (parse-value-with-commas (dbg (nth values 6)))) date)) 
         btc (read-string (nth values 4))
         ]
+    
   {
    :sek sek
    :btc btc
    :sek->btc (double (/ sek btc))
    :date date
+   :exchange :trijo
   }))
 
 
@@ -161,7 +191,7 @@
 
 
 (defn total-orders []
-  (sort-by :date (apply concat [(foreign-orders) (trijo-orders) (safello-orders) (btcx-orders)])))
+  (sort-by :sek->btc (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
 
 (defn total-sek-spent [] (apply + (map :sek (total-orders))))
 
