@@ -33,7 +33,7 @@
 (defn sats->btc [sats]
   (/ sats sats-per-btc))
 
-(def dir (File. (System/getProperty "user.home") "btcorders"))
+(def dir (-> "btcorders" clojure.java.io/resource clojure.java.io/file))
 
 ;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
 (def eur->sek-historical-rates-map
@@ -247,10 +247,10 @@
 (defn save! []
   (spit t-file (encrypt pwd/pwd @data)))
 
-(defn spend! [id btc]
-  (swap! data conj [id btc]))
+(defn spend! [id btc sek-per-btc-rate]
+  (swap! data conj [id btc sek-per-btc-rate]))
 
-(defn total-balance []
+(def total-balance 
   (loop [m total-orders-as-map
          b @data]
     (if-let [[id sats] (first b)]
@@ -265,3 +265,8 @@
           :else  
           (throw (IllegalStateException. (format "id %s is overspent" id)))))
       m)))
+
+(defn find-tx-to-spend [sek]
+  
+  )
+
