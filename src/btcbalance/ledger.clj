@@ -11,6 +11,15 @@
            [java.time OffsetDateTime LocalDateTime ZoneId]
            [java.time.format DateTimeFormatter]
            [btcbalance HistoricalRate]))
+
+(def sats-per-btc 1e8)
+
+(defn btc->sats [btc]
+  (long (* btc sats-per-btc)))
+
+(defn sats->btc [sats]
+  (/ sats sats-per-btc))
+
 (def dir (File. (System/getProperty "user.home") "btcorders"))
 
 ;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
@@ -38,7 +47,7 @@
   (let [sek (read-string (first values))
         btc (read-string (read-string (nth values 7)))]
   {:sek sek
-   :btc btc
+   :sats (btc->sats btc)
    :sek->btc (double (/ sek btc))
    :date (Date. (read-string (nth values 14)))
    :network-fee (nth values 13)
@@ -66,7 +75,7 @@
   (let [sek (read-string (nth values 7))
         btc (read-string (nth values 8))]
   {:sek sek
-   :btc btc
+   :sats (btc->sats btc)
    :sek->btc (double (/ sek btc))
    :date (string-to-date (nth values 6))
    :exchange :safello
@@ -172,7 +181,7 @@
     
   {
    :sek sek
-   :btc btc
+   :sats (btc->sats btc)
    :sek->btc (double (/ sek btc))
    :date date
    :exchange :trijo
@@ -197,14 +206,18 @@
 (def total-orders 
   (sort-by :sek->btc (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
 
+(def total-orders-as-map
+  (into {} (map (fn [values] [(:id values) (dissoc values :id)]) total-orders)))
+  
+
 (defn total-sek-spent [] (apply + (map :sek total-orders)))
 
-(defn total-btc [] (apply + (map :btc total-orders)))
+(defn total-btc [] (sats->btc (apply + (map :sats total-orders))))
 
 (defn total-sek [] (* (SEK-last) (total-btc)))
 
 (defn calc-profit-loss [curr-sek->btc-rate m]
-  (let [btc (:btc m)
+  (let [btc (sats->btc (:sats m))
         rate (:sek->btc m)]
     (- (* btc curr-sek->btc-rate) (* btc rate))))
 
@@ -212,17 +225,8 @@
   (let [the-fn (partial calc-profit-loss (SEK-last))]
     (filter (fn [m] (neg? (the-fn m))) total-orders)))
 
-(defn txs-in-profit-of [value-in-btc]
-  (loop [sum-in-btc 0
-         orders-in-profit []
-         values total-orders]
-    (if (and (< sum-in-btc value-in-btc) (not (empty? values)))
-      (recur (+ sum-in-btc (-> values first :btc)) 
-             (conj orders-in-profit (first values)) 
-             (rest values))
-      orders-in-profit)))
-
-
+(defn calc-tx-loss []
+  (apply + (map (partial calc-profit-loss (SEK-last)) (get-txs-in-loss))))
 
 (assert (= (count (set (map :id total-orders))) (count total-orders)) "Error, ids are not unique")
 
@@ -233,3 +237,21 @@
 (defn save! []
   (spit t-file (pr-str @data)))
 
+(defn spend [id btc]
+  (swap! data conj [id btc]))
+
+(defn total-balance []
+  (loop [m total-orders-as-map
+         b @data]
+    (if-let [[id sats] (first b)]
+      (let [t (get m id)
+            v-in-sats (:sats t)
+            new-balance (- v-in-sats sats)]
+        (cond 
+          (pos? new-balance)
+          (recur (assoc m id (assoc t :sats (- v-in-sats sats))) (rest b))
+          (zero? new-balance)
+          (recur (dissoc m id) (rest b))      
+          :else  
+          (throw (IllegalStateException. (format "id %s is overspent" id)))))
+      m)))
