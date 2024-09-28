@@ -1,10 +1,10 @@
 (ns btcbalance.core
   (:use [clojure.pprint])
-  #_(:require [bchain.core :refer [dbg rawaddr SEK SEK-last USD USD-last satoshi blocks historical-price]]
-             [bchain.shape :as ss]
-             [bchain.balance :refer [convert balance def-balance total-balance convert-to store! all-balance store-proc]]
+  (:require [bchain.core :refer [SEK SEK-last USD USD-last satoshi]]
+            #_[bchain.shape :as ss]
+            #_[bchain.balance :refer [convert balance def-balance total-balance convert-to store! all-balance store-proc]]
             
-             )
+            )
   (:import [java.net URL]
            [java.text SimpleDateFormat]))
 
@@ -139,7 +139,7 @@
 
 (defn growth-fn [factor acc v]
   (let [[v y] (first acc)]
-    (cons [(Math/round (double (* factor v))) (inc y)] acc))) 
+    (cons [(double (* factor v)) (inc y)] acc))) 
   
 
 (defn growth [value percent years]
@@ -250,3 +250,5 @@
 
 
 (String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
+
+

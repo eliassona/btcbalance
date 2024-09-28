@@ -1,6 +1,7 @@
 (ns btcbalance.ledger
   (:require [btcbalance.core :refer [growth dbg]]
            [bchain.core :refer [EUR-last SEK SEK-last USD USD-last satoshi]]
+           [btcbalance.secure.pwd :as pwd]
            [clojure.string :as str]
            [clojure.data.json :as json]
            [clojure.xml :as xml]
@@ -10,7 +11,19 @@
            [java.io File]
            [java.time OffsetDateTime LocalDateTime ZoneId]
            [java.time.format DateTimeFormatter]
-           [btcbalance HistoricalRate]))
+           [btcbalance AES256]))
+
+
+(defn encrypt [master-key data]
+  (->> data pr-str (AES256/encrypt master-key)))
+
+(defn decrypt [master-key encrypted-data]
+  (if master-key
+    (try 
+      (->> encrypted-data (AES256/decrypt master-key) read-string)
+      (catch Exception e
+        (throw (IllegalArgumentException. "wrong password"))))
+    nil))
 
 (def sats-per-btc 1e8)
 
@@ -135,9 +148,6 @@
 (def trijo-deposits
   (sort-by :date (trijo-deposits-of trijo-split-values)))
 
-(def depo-date (HistoricalRate. trijo-deposits))  
-
-
 (defn deposit-date-of [order-date]
   (let [order-date-in-ms (.getTime order-date)]
     (loop [
@@ -232,12 +242,12 @@
 
 (def t-file (clojure.java.io/resource "t.txt"))
 
-(def data (atom (read-string (slurp t-file))))
+(def data (atom (decrypt pwd/pwd (slurp t-file))))
 
 (defn save! []
-  (spit t-file (pr-str @data)))
+  (spit t-file (encrypt pwd/pwd @data)))
 
-(defn spend [id btc]
+(defn spend! [id btc]
   (swap! data conj [id btc]))
 
 (defn total-balance []
