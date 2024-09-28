@@ -41,6 +41,10 @@
          (find-to-spend 35902)))
   )
 
+(deftest test-calc-profit
+  
+  )
+
 
 
 
