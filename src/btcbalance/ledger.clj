@@ -212,7 +212,6 @@
 (defn foreign-orders []
   (safello-orders "foreign.csv"))
 
-
 (def total-orders 
   (sort-by :sek->btc (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
 
@@ -250,7 +249,7 @@
 (defn spend! [id btc sek-per-btc-rate]
   (swap! data conj [id btc sek-per-btc-rate]))
 
-(def total-balance 
+(def total-balance-map 
   (loop [m total-orders-as-map
          b @data]
     (if-let [[id sats] (first b)]
@@ -266,7 +265,29 @@
           (throw (IllegalStateException. (format "id %s is overspent" id)))))
       m)))
 
-(defn find-tx-to-spend [sek]
-  
-  )
+
+(def total-balance
+  (sort-by 
+    :sek->btc 
+    (map 
+      (fn [id] (assoc (get total-balance-map id) :id id)) 
+      (keys total-balance-map))))
+
+(defn find-tx-to-spend [sats-to-spend]
+  (loop [orders (reverse total-balance)
+         sum-in-sats 0
+         spent-orders []]
+    (if-let [order (first orders)]
+      (if (< sum-in-sats sats-to-spend)
+        (let [sats (:sats order)
+              new-sum-in-sats (+ sum-in-sats sats)]
+          (recur (rest orders) 
+                 new-sum-in-sats
+                 (if (> new-sum-in-sats sats-to-spend)
+                   (conj spent-orders(assoc order :sats (- sats (- new-sum-in-sats sats-to-spend))))
+                   (conj spent-orders order))))
+        spent-orders)
+      (do
+        (println "Could not fill order")
+        spent-orders))))
 
