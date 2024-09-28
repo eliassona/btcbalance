@@ -42,7 +42,19 @@
   )
 
 (deftest test-calc-profit
-  
+  (is 
+    (= 
+      [{:profit -68.81251163249999, :value 222.0} 
+       {:profit -69.4124883675, :value 221.4} 
+       {:profit -70.0124883675, :value 220.8} 
+       {:profit -70.01251163249998, :value 220.8} 
+       {:profit -69.725, :value 218.4} 
+       {:profit -70.61246510250004, :value 220.2} 
+       {:profit -70.61250000000001, :value 220.2} 
+       {:profit -71.52498847500001, :value 216.6} 
+       {:profit -73.01248836750003, :value 217.79999999999998} 
+       {:profit -72.724988475, :value 215.4}] 
+      (calc-profit 600000 the-data))) 
   )
 
 

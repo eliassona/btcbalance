@@ -284,10 +284,20 @@
           (recur (rest orders) 
                  new-sum-in-sats
                  (if (> new-sum-in-sats sats-to-spend)
-                   (conj spent-orders(assoc order :sats (- sats (- new-sum-in-sats sats-to-spend))))
+                   (conj spent-orders (assoc order :sats (- sats (- new-sum-in-sats sats-to-spend))))
                    (conj spent-orders order))))
         spent-orders)
       (do
         (println "Could not fill order")
         spent-orders))))
 
+(defn calc-profit [sek->btc-rate orders]
+    (map 
+      (fn [order]
+        (let [btc (sats->btc (:sats order))
+              sek (* sek->btc-rate btc)]
+          {:profit (- sek (* (:sek->btc order) btc))
+           :value sek
+           })) orders))
+  
+  
