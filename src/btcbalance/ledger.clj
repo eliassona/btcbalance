@@ -12,6 +12,12 @@
            [java.time OffsetDateTime LocalDateTime ZoneId]
            [java.time.format DateTimeFormatter]
            [btcbalance AES256]))
+(def day-in-ms (* 24 3600 1000))
+
+(def date-formatter (SimpleDateFormat. "yyyy-MM-dd"))
+
+(defn str->date [date-str]
+    (.parse date-formatter date-str))
 
 
 (defn encrypt [master-key data]
@@ -33,20 +39,28 @@
 (defn sats->btc [sats]
   (/ sats sats-per-btc))
 
-(def dir (-> "btcorders" clojure.java.io/resource clojure.java.io/file))
+(def two-weeks-in-ms (* 14 day-in-ms))
+
+(defn up-to-date? [msg date]
+  (let [curr-date (.getTime (Date.))]
+    (when (< (+ two-weeks-in-ms (.getTime date)) curr-date)
+      (println msg)))) 
+    
+
+
+(def ^:dynamic dir (-> "btcorders" clojure.java.io/resource clojure.java.io/file))
 
 ;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
 (def eur->sek-historical-rates-map
   (into 
     {}
-    (let [formatter (SimpleDateFormat. "yyyy-MM-dd")]
-      (map 
-        (fn [m] 
-          (let [attrs (:attrs m)]
-            [(:TIME_PERIOD attrs)
-            (read-string (:OBS_VALUE attrs))]
-             ))
-        (:content (second (:content (second (:content (xml/parse (File. dir "eur-sek.xml")))))))))))
+    (map 
+      (fn [m] 
+        (let [attrs (:attrs m)]
+          [(:TIME_PERIOD attrs)
+          (read-string (:OBS_VALUE attrs))]
+           ))
+      (:content (second (:content (second (:content (xml/parse (File. dir "eur-sek.xml"))))))))))
 
 
 (defn sek-usd-rate [] (/ (SEK-last) (USD-last)))
@@ -109,7 +123,6 @@
 
 ;trijo deposits
 
-(def date-formatter (SimpleDateFormat. "yyyy-MM-dd"))
 
 (defn date->string [date]
   (.format date-formatter date))
@@ -135,35 +148,32 @@
     (= (nth values 2) "INSÄTTNING") 
     (= (nth values 7) "GENOMFÖRD")))
 
-(def trijo-files (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
-(def trijo-split-values (apply 
-                          concat 
-                          (map #(map split-csv (rest (.split (slurp %) "\n"))) trijo-files)))
+(defn trijo-files [] (filter #(.startsWith (.getName %) "trijo") (.listFiles dir)))
+(defn trijo-split-values [] (apply 
+                              concat 
+                              (map #(map split-csv (rest (.split (slurp %) "\n"))) (trijo-files))))
 
 (defn trijo-deposits-of [values]
   (let [values (filter deposit? values)]
     (map trijo-deposit-date values)))
 
 
-(def trijo-deposits
-  (sort-by :date (trijo-deposits-of trijo-split-values)))
+(defn trijo-deposits []
+  (sort-by :date (trijo-deposits-of (trijo-split-values))))
 
 (defn deposit-date-of [order-date]
-  (let [order-date-in-ms (.getTime order-date)]
+  (let [order-date-in-ms (.getTime order-date)
+        td (trijo-deposits)]
     (loop [
-           depo (-> trijo-deposits first :date)
-           rest-deposits (rest trijo-deposits)]
+           depo (-> td first :date)
+           rest-deposits (rest td)]
       (if-let [curr (-> rest-deposits first :date)]
         (if (> order-date-in-ms (.getTime curr))
           (recur curr (rest rest-deposits))
           depo)
         depo))))
 
-(defn str->date [date-str]
-  (let [date-formatter (SimpleDateFormat. "yyyy-MM-dd")]
-    (.parse date-formatter date-str)))
 
-(def day-in-ms (* 24 3600 1000))
 
 (defn eur->sek-rate-of [date]
   (if-let [rate (get eur->sek-historical-rates-map (date->string date))]
@@ -206,22 +216,23 @@
       #(and (= (nth % 2) "ordrar") (= (nth % 7) "GENOMFÖRD"))
       values)))
 
-(defn trijo-orders []
-  (sort-by :date (trijo-orders-of trijo-split-values)))
+(defn trijo-orders [] 
+  (sort-by :date (trijo-orders-of (trijo-split-values))))
+
 
 (defn foreign-orders []
   (safello-orders "foreign.csv"))
 
-(def total-orders 
+(defn total-orders [] 
   (sort-by :sek->btc (apply concat [(trijo-orders) (safello-orders) (btcx-orders)])))
 
-(def total-orders-as-map
-  (into {} (map (fn [values] [(:id values) (dissoc values :id)]) total-orders)))
+(defn total-orders-as-map []
+  (into {} (map (fn [values] [(:id values) (dissoc values :id)]) (total-orders))))
   
 
-(defn total-sek-spent [] (apply + (map :sek total-orders)))
+(defn total-sek-spent [] (apply + (map :sek (total-orders))))
 
-(defn total-btc [] (sats->btc (apply + (map :sats total-orders))))
+(defn total-btc [] (sats->btc (apply + (map :sats (total-orders)))))
 
 (defn total-sek [] (* (SEK-last) (total-btc)))
 
@@ -232,12 +243,12 @@
 
 (defn get-txs-in-loss []
   (let [the-fn (partial calc-profit-loss (SEK-last))]
-    (filter (fn [m] (neg? (the-fn m))) total-orders)))
+    (filter (fn [m] (neg? (the-fn m))) (total-orders))))
 
 (defn calc-tx-loss []
   (apply + (map (partial calc-profit-loss (SEK-last)) (get-txs-in-loss))))
-
-(assert (= (count (set (map :id total-orders))) (count total-orders)) "Error, ids are not unique")
+(let [t-o (total-orders)]
+  (assert (= (count (set (map :id t-o))) (count t-o)) "Error, ids are not unique"))
 
 (def t-file (clojure.java.io/resource "t.txt"))
 
@@ -252,8 +263,8 @@
   ([{:keys [id sats sek->btc]}]
     (spend! id sats sek->btc)))
 
-(def total-balance-map 
-  (loop [m total-orders-as-map
+(defn total-balance-map [] 
+  (loop [m (total-orders-as-map)
          b @data]
     (if-let [[id sats] (first b)]
       (let [t (get m id)
@@ -269,15 +280,16 @@
       m)))
 
 
-(def total-balance
-  (sort-by 
-    :sek->btc 
-    (map 
-      (fn [id] (assoc (get total-balance-map id) :id id)) 
-      (keys total-balance-map))))
+(defn total-balance []
+  (let [tbm (total-balance-map)]
+    (sort-by 
+      :sek->btc 
+      (map 
+        (fn [id] (assoc (get tbm id) :id id)) 
+        (keys tbm)))))
 
 (defn find-tx-to-spend [sats-to-spend]
-  (loop [orders (reverse total-balance)
+  (loop [orders (total-balance)
          sum-in-sats 0
          spent-orders []]
     (if-let [order (first orders)]
@@ -302,5 +314,10 @@
           {:profit (- sek (* (:sek->btc order) btc))
            :value sek
            })) orders))
-  
+(comment
+  "Evaluate these to get a warning if the data is too old"
+  (up-to-date? "Warning, the EUR to SEK historical exchange rate is more than two weeks old" (last (sort (map str->date (keys eur->sek-historical-rates-map)))))
+  (up-to-date? "Warning, the last trijo order is more than two weeks old" (-> (trijo-orders) last :date))
+  )
+
   
