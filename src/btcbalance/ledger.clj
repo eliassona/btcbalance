@@ -246,8 +246,11 @@
 (defn save! []
   (spit t-file (encrypt pwd/pwd @data)))
 
-(defn spend! [id btc sek-per-btc-rate]
-  (swap! data conj [id btc sek-per-btc-rate]))
+(defn spend! 
+  ([id sats sek-per-btc-rate]
+    (swap! data conj [id sats sek-per-btc-rate]))
+  ([{:keys [id sats sek->btc]}]
+    (spend! id sats sek->btc)))
 
 (def total-balance-map 
   (loop [m total-orders-as-map
