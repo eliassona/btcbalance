@@ -1,0 +1,2 @@
+id;type;crypto_currency;crypto_address;payment_method;status;created;fiat_amount;crypto_amount
+foreign1;buy;BTC;asdf;swish_ecommerce;completed;2018-05-25T07:47:34+0200;200000;0.01

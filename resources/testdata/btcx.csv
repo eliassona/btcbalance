@@ -1,0 +1,8 @@
+amount,bank,bankNr,clearingNr,coin,cryptoAddress,currency,estimatedAmount,feedbackDetails,feedbackReason,ipAddress,name,networkFee,orderDate,orderNumber,paymentMethod,phoneNumber,reference,sendReceipt,status,swishRedirectURL,tradePair,type
+10000.0000000000,,,,BTC,"asdf",BTC,"0.020926510000000000000000000000",,,",","",,1,btcx1,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+10000.0000000000,,,,BTC,"asdf",BTC,"0.019054310000000000000000000000",,,",","",,2,btcx2,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+10000.0000000000,,,,BTC,"asdf",BTC,"0.018778230000000000000000000000",,,",","",,3,btcx3,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+10000.0000000000,,,,BTC,"asdf",BTC,"0.018302370000000000000000000000",,,",","",,4,btcx4,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+10000.0000000000,,,,BTC,"adsf",BTC,"0.017964640000000000000000000000",,,",","",,5,btcx5,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+4000.0000000000,,,,BTC,"asdf",BTC,"0.007191060000000000000000000000",,,",","",,6,btcx6,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
+10000.0000000000,,,,BTC,"asdf",BTC,"0.016771040000000000000000000000",,,",","",,7,btcx7,SwishECommerce,,"",,COMPLETED,,SEK/BTC,BUY
