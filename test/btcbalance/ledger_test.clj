@@ -1,6 +1,7 @@
 (ns btcbalance.ledger-test
   (:require [clojure.test :refer :all]
-            [btcbalance.ledger :refer :all]))
+            [btcbalance.ledger :refer :all])
+  (:import [java.util Date]))
 
 (def test-dir (-> "testdata" clojure.java.io/resource clojure.java.io/file))
 (def the-data 
@@ -76,9 +77,10 @@
     (is (= [{:sek 10000, :sats 13524660, :sek->btc 73939.01214522214, :date #inst "2020-04-12T08:15:34.000-00:00", :exchange :safello, :id "safello6"}
             {:sek 10000, :sats 1, :sek->btc 75022.35103393179, :date #inst "2020-04-20T18:20:16.000-00:00", :exchange :safello, :id "safello5"}]
            (find-tx-to-spend 13524661)))
-    (doseq [tx (find-tx-to-spend 13524661)]
-      (spend! tx)
-      )
+    (let [date (Date.)]
+      (doseq [tx (find-tx-to-spend 13524661)]
+        (spend! tx date)
+        ))
     (is (= [["safello6" 13524660 73939.01214522214] ["safello5" 1 75022.35103393179]] @data))
     (is (= ["safello5" "safello3" "safello2" "safello4" "1" "2" "3" "4" "6" "5" "7" "trijo3" "trijo5" "trijo4" "trijo6"] 
            (map :id (total-balance))))
