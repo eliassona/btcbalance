@@ -258,10 +258,10 @@
   (spit t-file (encrypt pwd/pwd @data)))
 
 (defn spend! 
-  ([id sats sek-per-btc-rate]
-    (swap! data conj [id sats sek-per-btc-rate]))
-  ([{:keys [id sats sek->btc]}]
-    (spend! id sats sek->btc)))
+  ([id sats sek-per-btc-rate date]
+    (swap! data conj [id sats sek-per-btc-rate date]))
+  ([{:keys [id sats sek->btc]} date]
+    (spend! id sats sek->btc date)))
 
 (defn total-balance-map [] 
   (loop [m (total-orders-as-map)
@@ -314,7 +314,7 @@
           {:profit (- sek (* (:sek->btc order) btc))
            :value sek
            })) orders))
-(comment
+(defn run-check []
   "Evaluate these to get a warning if the data is too old"
   (up-to-date? "Warning, the EUR to SEK historical exchange rate is more than two weeks old" (last (sort (map str->date (keys eur->sek-historical-rates-map)))))
   (up-to-date? "Warning, the last trijo order is more than two weeks old" (-> (trijo-orders) last :date))
