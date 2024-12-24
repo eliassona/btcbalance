@@ -1,17 +1,26 @@
 (ns btcbalance.core
   (:use [clojure.pprint])
-  (:require [bchain.core :refer [SEK SEK-last USD USD-last satoshi]]
+  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last satoshi]]
+            [clj-http.client :as client]
+            [hickory.core :as hickory]
+            [hickory.select :as s]
             #_[bchain.shape :as ss]
             #_[bchain.balance :refer [convert balance def-balance total-balance convert-to store! all-balance store-proc]]
             
             )
-  (:import [java.net URL]
+  (:import [java.io File] 
+           [java.net URL]
            [java.text SimpleDateFormat]))
 
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
      x#))
+
+(def home-dir (File. (System/getProperty "user.home"), "btcbalance"))
+
+(when (not (.exists home-dir))
+  (.mkdirs home-dir))
 
 (defn url-get [url]
   (let [con (.openConnection (URL. url))
@@ -22,9 +31,6 @@
       (slurp in)
       (finally (.close in)))))
 
-
-(defn growth [money interest days]
-  (reduce (fn [acc _] (* acc interest)) money (range days)))
 
 (defn parse-price [p]
   (read-string (reduce str (.split p ","))))
@@ -72,14 +78,6 @@
         p (:price m)]
     {:open p, :date t, :market-cap 0, :close p, :volume 0, :high p, :low p}))
   
-(defn growth [value percent n]
-  (let [pc (+ 1 (/ percent 100))]
-    (loop [value value
-           n n]
-      (if (> n 0)
-        (recur (* pc value) (dec n))
-        (double value)))))
-
 (defn to-proper-format [l]
   (apply hash-map (parse-it l)))
   
@@ -137,15 +135,24 @@
 
 (defn giovani-price [days] (* (Math/pow 10 -17) (Math/pow days 5.83)))
 
-(defn growth-fn [factor acc v]
-  (let [[v y] (first acc)]
-    (cons [(double (* factor v)) (inc y)] acc))) 
+(defn growth-fn [factor decay withdraw acc v]
+  (let [[v y w] (first acc)
+        wd-value (/ (* withdraw v) 100)]
+    (cons [(double (* (- factor decay) (- v wd-value))) (inc y) wd-value] acc))) 
   
 
-(defn growth [value percent years]
-  (let [factor (+ 1 (/ percent 100))]
-    (reduce (partial growth-fn factor) [[value 0]] (range years)))) 
+(defn growth 
+  ([value percent years decay withdraw]
+    (let [factor (+ 1 (/ percent 100))]
+      (reduce (partial growth-fn factor (/ decay 100) withdraw) [[value 0 0]] (range years))))
+  ([value percent years decay]
+    (growth value percent years decay 0))
+  ([value percent years]
+    (growth value percent years 0)))
   
+(defn growth->money-fn [[fortune year withdraw]]
+  [(money fortune) year (money withdraw)]) 
+
 (defn cagr-of [start end years]
   (let [diff (- end start)
         step (cond (= diff 0) 0
@@ -249,6 +256,56 @@
         house-price-sek))
 
 
-(String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
+
+(defn get-stock-page [symbol]
+  (let [url (str "https://finance.yahoo.com/quote/" symbol)
+        response (client/get url {:headers {"User-Agent" "Mozilla/5.0"}})] ;; Add User-Agent header to mimic a browser
+    (:body response)))
+
+(defn parse-html [html]
+  (-> html
+      hickory/parse
+      hickory/as-hickory))
+
+(defprotocol Ticker 
+  (ticker-of [obj sym]))
+
+(defn entry-of [sym e]
+  (let [v (ticker-of (val e) sym)]
+    (when v
+      e)))
+  
+
+(extend-protocol Ticker
+  clojure.lang.Keyword
+  (ticker-of [s kw] kw)
+  String
+  (ticker-of [s sym] (if (>= (.indexOf s sym) 0) s nil))
+  java.util.Map
+  (ticker-of [m sym] (filter identity (map (partial entry-of sym) m)))
+  java.util.List
+  (ticker-of [l sym] (filter identity (map #(ticker-of % sym) l)))
+  )
+
+
+#_(String/format "You should %sbuy btc!" (into-array String [(if (buy-btc?) "" "not ")]))
+(defn sek-usd-rate [] (/ (SEK-last) (USD-last)))
+(defn sek-eur-rate [] (/ (SEK-last) (EUR-last)))
+(defn money [n]
+  (let [n (long n)
+        formatted (String/format (java.util.Locale/US) "%,d" (object-array [n]))]
+    (clojure.string/replace formatted #"," "'")))
+(def total-nr-of-btc 21e6)
+(def world-population 5.5e9)
+(def sweden-population 10e6)
+(def btc-per-capita (/ total-nr-of-btc world-population))
+(def world-median-welth-usd 9300)
+(def world-average-welth-usd 84718)
+(def total-welth-usd (* world-average-welth-usd world-population))
+(defn hyper-bitcoinized-usd-value-of [btc average-welth]
+  (/ (* average-welth (/ btc btc-per-capita)) 2))
+  
+  
+
 
 
