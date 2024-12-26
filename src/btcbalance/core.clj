@@ -135,10 +135,13 @@
 
 (defn giovani-price [days] (* (Math/pow 10 -17) (Math/pow days 5.83)))
 
+(defn decay-fn [factor year decay]
+  (dbg (max 1.04 (- factor (* year decay)))))
+
 (defn growth-fn [factor decay withdraw acc v]
   (let [[v y w] (first acc)
         wd-value (/ (* withdraw v) 100)]
-    (cons [(double (* (- factor decay) (- v wd-value))) (inc y) wd-value] acc))) 
+    (cons [(double (* (decay-fn factor y decay) (- v wd-value))) (inc y) wd-value] acc))) 
   
 
 (defn growth 
