@@ -47,7 +47,6 @@
       (println msg)))) 
     
 
-
 (def ^:dynamic dir (-> "btcorders" clojure.java.io/resource clojure.java.io/file))
 
 ;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
@@ -236,6 +235,8 @@
 
 (defn total-sek [] (* (SEK-last) (total-btc)))
 
+(defn average-sek-spent [] (double (/ (total-sek-spent) (total-btc))))
+
 (defn calc-profit-loss [curr-sek->btc-rate m]
   (let [btc (sats->btc (:sats m))
         rate (:sek->btc m)]
@@ -245,8 +246,8 @@
   (let [the-fn (partial calc-profit-loss (SEK-last))]
     (filter (fn [m] (neg? (the-fn m))) (total-orders))))
 
-(defn calc-tx-loss []
-  (apply + (map (partial calc-profit-loss (SEK-last)) (get-txs-in-loss))))
+(defn calc-tx-loss [values]
+  (apply + (map (partial calc-profit-loss (SEK-last)) values)))
 (let [t-o (total-orders)]
   (assert (= (count (set (map :id t-o))) (count t-o)) "Error, ids are not unique"))
 

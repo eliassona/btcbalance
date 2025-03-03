@@ -4,6 +4,7 @@
             [clj-http.client :as client]
             [hickory.core :as hickory]
             [hickory.select :as s]
+            [clojure.data :as data]
             #_[bchain.shape :as ss]
             #_[bchain.balance :refer [convert balance def-balance total-balance convert-to store! all-balance store-proc]]
             
@@ -136,25 +137,20 @@
 (defn giovani-price [days] (* (Math/pow 10 -17) (Math/pow days 5.83)))
 
 (defn decay-fn [factor year decay]
-  (dbg (max 1.04 (- factor (* year decay)))))
+  (max 1.04 (- factor (* year decay))))
 
-(defn growth-fn [factor decay withdraw acc v]
-  (let [[v y w] (first acc)
-        wd-value (/ (* withdraw v) 100)]
-    (cons [(double (* (decay-fn factor y decay) (- v wd-value))) (inc y) wd-value] acc))) 
-  
+ 
+(defn growth-fn [factor acc year]
+  (let [last-value (-> acc first first)]
+    (cons [(double (+ last-value (* last-value factor))) year] acc)))  
 
 (defn growth 
-  ([value percent years decay withdraw]
-    (let [factor (+ 1 (/ percent 100))]
-      (reduce (partial growth-fn factor (/ decay 100) withdraw) [[value 0 0]] (range years))))
-  ([value percent years decay]
-    (growth value percent years decay 0))
   ([value percent years]
-    (growth value percent years 0)))
+    (let [factor (dbg (/ percent 100))]
+      (reduce (partial growth-fn factor) [[value 0]] (range 1 (inc years))))))
   
-(defn growth->money-fn [[fortune year withdraw]]
-  [(money fortune) year (money withdraw)]) 
+#_(defn growth->money-fn [[fortune year withdraw]]
+   [(money fortune) year (money withdraw)]) 
 
 (defn cagr-of [start end years]
   (let [diff (- end start)
@@ -306,9 +302,14 @@
 (def world-average-welth-usd 84718)
 (def total-welth-usd (* world-average-welth-usd world-population))
 (defn hyper-bitcoinized-usd-value-of [btc average-welth]
-  (/ (* average-welth (/ btc btc-per-capita)) 2))
+(/ (* average-welth (/ btc btc-per-capita)) 2))
   
-  
+
+(defn sats-price [price-sek]
+  (long (/ price-sek (SEK-last) satoshi)))
+(defn egg-30 [] (sats-price 125))
+(defn gas [] (sats-price 17))
+
 
 
 
