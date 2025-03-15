@@ -36,10 +36,7 @@
 (defn parse-price [p]
   (read-string (reduce str (.split p ","))))
 
-(defn parse-date [d]
-  d)
-
-(def date-template (SimpleDateFormat. "mm/dd/yyyy"))
+(def date-template (SimpleDateFormat. "MM/dd/yyyy"))
 
 (defn date-str->unix-time [d] (.parse date-template d))
 
@@ -53,9 +50,18 @@
    (parse-price (.substring v ix2 ix3))]
   ))
 
+(def bhd-file (File. "/Users/anderseliasson/src/btcbalance/resources/Bitcoin_Historical_Data.csv"))
+
 (def raw-btc-price
     (map split-it 
-         (rest (.split (slurp (clojure.java.io/resource "Bitcoin_Historical_Data.csv")) "\n"))))
+         (.split (slurp bhd-file) "\n")))
+
+(defn curr-ticket []
+  (format "\"%s\", \"%s\"" (.format date-template (java.util.Date.)) (USD-last))
+  )
+(defn save! [] 
+  (let [text (slurp bhd-file)]
+    (spit bhd-file (format "%s\n%s" (curr-ticket) text))))
 
 
 (defn- latest-time []
