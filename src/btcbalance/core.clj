@@ -39,34 +39,27 @@
 (defn parse-date [d]
   d)
 
-(def date-template (SimpleDateFormat. "MMM dd, yyyy"))
+(def date-template (SimpleDateFormat. "mm/dd/yyyy"))
 
 (defn date-str->unix-time [d] (.parse date-template d))
 
-(defn parse-it [[date open high low close volume market-cap]]
-  [:date (parse-date date), 
-   :open (parse-price open), 
-   :high (parse-price high), 
-   :low (parse-price low), 
-   :close (parse-price close), 
-   :volume (parse-price volume), 
-   :market-cap (parse-price market-cap)]
-  )
-
-
-
-
-
 (defn split-it [v]
-  (apply hash-map (parse-it (.split v "\t"))))
+  (let [ix0 (inc (.indexOf v "\""))
+        ix1 (.indexOf v "\"" ix0)
+        ix2 (inc (.indexOf v "\"" (inc ix1)))
+        ix3 (.indexOf v "\"" ix2)
+        ]
+  [(.substring v ix0 ix1)
+   (parse-price (.substring v ix2 ix3))]
+  ))
 
-(def raw-btc-price 
+(def raw-btc-price
     (map split-it 
-         (.split (slurp (clojure.java.io/resource "btcprice")) "\n")))
+         (rest (.split (slurp (clojure.java.io/resource "Bitcoin_Historical_Data.csv")) "\n"))))
 
 
 (defn- latest-time []
-  (.getTime (date-str->unix-time (:date (first raw-btc-price)))))
+  (.getTime (date-str->unix-time (first (first raw-btc-price)))))
 
 (defn- current-time [] (System/currentTimeMillis))
 
@@ -74,26 +67,12 @@
 
 (defn- days-missing [] (inc (int (/ (- (current-time) (latest-time)) day-in-millis))))
 
-(defn make-compatible [m]
-  (let [t (:time m)
-        p (:price m)]
-    {:open p, :date t, :market-cap 0, :close p, :volume 0, :high p, :low p}))
-  
-(defn to-proper-format [l]
-  (apply hash-map (parse-it l)))
-  
-
-#_(def raw-btc-price 
-   (concat (map make-compatible (historical-price (days-missing))) (dbg raw-btc-price)))
-(def raw-btc-price 
-  (concat (map to-proper-format (partition 7 (.split (slurp (clojure.java.io/resource "tmpbtcprice")) "\n"))) raw-btc-price))
-
 (defn last-of [ix n]
   (take n (drop ix raw-btc-price)))
 
 
 (defn moving-average-of [ix n] 
-  (/ (reduce + (map :close (last-of ix n))) n))
+  (/ (reduce + (map second (last-of ix n))) n))
 
 (defn moving-averages-of 
   "Get all n moving averages from ix going back in time back-in-days"
@@ -111,10 +90,10 @@
       
   
 
-(defn mayer-multiple-of [ix] (/ (-> raw-btc-price (nth ix) :close) (moving-average-of ix 200)))
+(defn mayer-multiple-of [ix] (/ (-> raw-btc-price (nth ix) second) (moving-average-of ix 200)))
 
 (def mayer-multiples 
-  (map (fn [ix] {:date (-> raw-btc-price (nth ix) :date) :mm (mayer-multiple-of ix)}) (range (- (count raw-btc-price) 200))))
+  (map (fn [ix] {:date (-> raw-btc-price (nth ix) first) :mm (mayer-multiple-of ix)}) (range (- (count raw-btc-price) 200))))
 
 (defn average-multiple []
   (/ (reduce + (map :mm mayer-multiples)) (count mayer-multiples)))
@@ -146,7 +125,7 @@
 
 (defn growth 
   ([value percent years]
-    (let [factor (dbg (/ percent 100))]
+    (let [factor (/ percent 100)]
       (reduce (partial growth-fn factor) [[value 0]] (range 1 (inc years))))))
   
 #_(defn growth->money-fn [[fortune year withdraw]]
