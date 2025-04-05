@@ -109,6 +109,34 @@
 (defn average-multiple []
   (/ (reduce + (map :mm mayer-multiples)) (count mayer-multiples)))
 
+(defn btc-price-at-ix [ix]
+  (-> raw-btc-price (nth ix) second))
+
+
+(defn date->value [date-str]
+  (loop [rbp raw-btc-price]
+    (when (not (empty? rbp))
+      (let [[d v] (first rbp)]
+        (if (= d date-str)
+          v
+          (recur (rest rbp)))))))
+
+(defn first-day-value []
+  (format "01/01/%s" (+ 1900 (.getYear (java.util.Date.))))
+  )
+  
+(defn value-delta->procent [v1 v2]
+  (double (* 100 (- (/ v1  v2) 1))))
+
+(defn return-of ([start end]
+  (value-delta->procent (btc-price-at-ix start) (btc-price-at-ix end)))
+  ([period]
+    (condp =
+      :ytd (value-delta->procent 
+             (btc-price-at-ix 0) 
+             (date->value (first-day-value))))))
+
+
 
 (defn buy-btc? [] (< (mayer-multiple-of 0) (average-multiple)))
   
