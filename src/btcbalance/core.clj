@@ -83,7 +83,7 @@
 (defn moving-averages-of 
   "Get all n moving averages from ix going back in time back-in-days"
   [ix n back-in-days] 
-  (map (fn [x] (moving-average-of x n)) (range back-in-days)))
+  (map (fn [x] (moving-average-of (+ ix x) n)) (range back-in-days)))
 
 (defn rising? [data]
   (loop [l data
@@ -94,9 +94,14 @@
         (recur (rest l) (first l))
         false))))
       
-  
+(defn last-price-of [ix]
+  (if (neg? ix)
+    (USD-last)
+    (-> raw-btc-price (nth ix) second)))
 
-(defn mayer-multiple-of [ix] (/ (-> raw-btc-price (nth ix) second) (moving-average-of ix 200)))
+(defn mayer-multiple-of [ix]
+  (let [ma (moving-average-of ix 200)]
+  (/ (last-price-of ix) ma)))
 
 (def mayer-multiples 
   (map (fn [ix] {:date (-> raw-btc-price (nth ix) first) :mm (mayer-multiple-of ix)}) (range (- (count raw-btc-price) 200))))
@@ -133,7 +138,10 @@
   ([value percent years]
     (let [factor (/ percent 100)]
       (reduce (partial growth-fn factor) [[value 0]] (range 1 (inc years))))))
-  
+
+(defn growth-goal [value percent years]
+  (-> (growth value percent years) first first))
+
 #_(defn growth->money-fn [[fortune year withdraw]]
    [(money fortune) year (money withdraw)]) 
 
@@ -294,7 +302,5 @@
   (long (/ price-sek (SEK-last) satoshi)))
 (defn egg-30 [] (sats-price 125))
 (defn gas [] (sats-price 17))
-
-
 
 
