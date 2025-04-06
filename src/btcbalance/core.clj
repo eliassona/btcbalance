@@ -121,9 +121,24 @@
           v
           (recur (rest rbp)))))))
 
+(defn current-year []
+  (+ 1900 (.getYear (java.util.Date.))))
+
+(defn btc-price-on-day 
+  ([month day year]
+    (loop [year year
+           result []]
+      (let [d (format "%02d/%02d/%s" month day year)
+            v (date->value d)]
+        (if v
+          (recur (dec year) (conj result [d v]))
+          result))))
+  ([]
+    (let [d (java.util.Date.)]
+      (btc-price-on-day (inc (.getMonth d)) (.getDate d) (current-year)))))
+
 (defn first-day-value []
-  (format "01/01/%s" (+ 1900 (.getYear (java.util.Date.))))
-  )
+  (format "01/01/%s" (current-year)))
   
 (defn value-delta->procent [v1 v2]
   (double (* 100 (- (/ v1  v2) 1))))
