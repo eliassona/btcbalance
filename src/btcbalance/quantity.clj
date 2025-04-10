@@ -1,5 +1,5 @@
 (ns btcbalance.quantity
-  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last satoshi]])
+  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last JPY-last satoshi]])
   )
 (defmacro dbg [body]
   `(let [x# ~body]
@@ -35,7 +35,9 @@
 (def conversion-map 
   (inv-of 
     {:btc {:usd USD-last
-           :sek SEK-last}
+           :sek SEK-last
+           :eur EUR-last
+           :jpy JPY-last}
      }))
 
 (def unit-set 
@@ -88,17 +90,22 @@
           to-fn (if to-fn to-fn (to-indirect-fn q to-unit))]
             (* (:value q) (to-fn))))
 
-(defn do-arith [op q1 q2]
+(defn do-arith 
+  ([op q1] q1)
+  ([op q1 q2]
   (let [u1 (:unit q1)
         u2 (:unit q2)]
     (Quantity. (op (:value q1) (if (= u1 u2) (:value q2) (convert q2 u1))) u1)))
+  ([op q1 q2 & args]
+    (reduce (fn [acc v] (add acc v)) (add q1 q2) args))
+  )
   
   
-
-(defn add [q1 q2] (do-arith + q1 q2))
-(defn sub [q1 q2] (do-arith - q1 q2))
-(defn mul [q1 q2] (do-arith * q1 q2))
-(defn div [q1 q2] (do-arith / q1 q2))
+(defn apply-op [op args] (apply (partial do-arith op) args))
+(defn add [& args] (apply-op + args))
+(defn sub [& args] (apply-op - args))
+(defn mul [& args] (apply-op * args))
+(defn div [& args] (apply-op / args))
   
 
 
