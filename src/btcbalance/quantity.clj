@@ -6,26 +6,63 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn assoc-inv [m]
-  (reduce 
-    (fn [acc v]
-      (let [[from to] (key v)
-            the-fn (val v)]
-        (assoc acc [to from] (fn [] (/ 1 (the-fn))))))
-    m m)
-  )
-  
-  
+
+
+(defn inv-fn-of [the-fn]
+  (fn [] (/ 1 (the-fn))))
+
+
+(defn inv-of [m]
+  (let [x (partition 
+            3
+            (flatten 
+              (map 
+                (fn [k] 
+                  (map 
+                    (fn [e] [(key e) k (inv-fn-of (val e))]) 
+                    (get m k))) 
+                (keys m))))]
+    (reduce 
+      (fn [acc [from-unit to-unit the-fn]]
+        (update acc from-unit assoc to-unit the-fn)
+        ) 
+      m 
+      x)
+    ))
+
+
+
 (def conversion-map 
-  (assoc-inv {[:usd :btc] USD-last
-              [:sek :btc] SEK-last}))
+  (inv-of 
+    {:btc {:usd USD-last
+           :sek SEK-last}
+     }))
+
+(def unit-set 
+  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) conversion-map))))
+
 
 (defrecord Quantity [value unit])
 
+(defn to-fn-of [from-unit to-unit]
+  (-> conversion-map (get from-unit) (get to-unit)))
+
+(defn path-of 
+  ([from-unit to-unit visited-units]
+    
+    )
+  ([from-unit to-unit]
+    (when-let [p (path-of from-unit to-unit (disj unit-set from-unit))]
+      (cons from-unit p) 
+    )))
+
 (defn convert 
   ([q to-unit visited-units]
-    (let [cm (get conversion-map [to-unit (:unit q)])]
-  (* (:value q) (cm))))
+    (let [from-unit (:unit q)
+          to-fn (to-fn-of from-unit to-unit)]
+          (if (nil? to-fn)
+            :failure
+            (* (:value q) (to-fn)))))
   ([q to-unit]
    (convert q to-unit #{}))) 
 
