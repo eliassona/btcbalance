@@ -44,27 +44,49 @@
 
 (defrecord Quantity [value unit])
 
-(defn to-fn-of [from-unit to-unit]
-  (-> conversion-map (get from-unit) (get to-unit)))
+(defn to-fn-of [c-map from-unit to-unit]
+  (-> c-map (get from-unit) (get to-unit)))
 
-(defn path-of 
-  ([from-unit to-unit visited-units]
-    
-    )
+(defn unit-path-of 
+  ([from-unit to-unit cm]
+    (let [units (into #{} (-> cm from-unit keys))]
+      (if (contains? units to-unit)
+        [from-unit to-unit]
+        (let [cm (dissoc cm from-unit)]
+          (loop [us units]
+            (if (empty? us)
+              nil
+              (if-let [up (unit-path-of (first us) to-unit cm)]
+                (cons from-unit up)
+                (recur (rest units)))))))))
   ([from-unit to-unit]
-    (when-let [p (path-of from-unit to-unit (disj unit-set from-unit))]
-      (cons from-unit p) 
-    )))
+    (unit-path-of from-unit to-unit conversion-map)))
+
+(defn path->fns [units]
+  (if (> (count units) 1)
+     (cons 
+       (to-fn-of conversion-map (first units) (second units)) 
+       (path->fns (rest units)))
+     []))
+
+(defn indirect-fn-of [fns]
+  (fn [] (reduce (fn [acc v] (* acc (v))) 1 fns)))
+
+(defn to-indirect-fn [q to-unit]
+  (let [from-unit (:unit q)]
+    (if-let [units (unit-path-of from-unit to-unit)]
+      (let [fns (path->fns units)]
+        (indirect-fn-of fns))
+      (throw 
+        (IllegalArgumentException. 
+          (format "Unit %s cannot be converted to %s" from-unit to-unit))))))       
 
 (defn convert 
-  ([q to-unit visited-units]
+  [q to-unit]
     (let [from-unit (:unit q)
-          to-fn (to-fn-of from-unit to-unit)]
-          (if (nil? to-fn)
-            :failure
-            (* (:value q) (to-fn)))))
-  ([q to-unit]
-   (convert q to-unit #{}))) 
+          to-fn (to-fn-of conversion-map from-unit to-unit)
+          to-fn (if to-fn to-fn (to-indirect-fn q to-unit))]
+            (* (:value q) (to-fn))))
 
 (defn do-arith [op q1 q2]
   (let [u1 (:unit q1)
@@ -73,8 +95,10 @@
   
   
 
-(defn add [q1 q2]
-  (do-arith + q1 q2))
+(defn add [q1 q2] (do-arith + q1 q2))
+(defn sub [q1 q2] (do-arith - q1 q2))
+(defn mul [q1 q2] (do-arith * q1 q2))
+(defn div [q1 q2] (do-arith / q1 q2))
   
 
 
