@@ -1,5 +1,5 @@
 (ns btcbalance.quantity
-  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last JPY-last satoshi]])
+  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last JPY-last satoshi]])  
   )
 (defmacro dbg [body]
   `(let [x# ~body]
@@ -30,18 +30,13 @@
       x)
     ))
 
+(def the-conversion-map (atom {}))
 
+(defn set-conversion-map! [m]
+  (reset! the-conversion-map (inv-of m)))
 
-(def conversion-map 
-  (inv-of 
-    {:btc {:usd USD-last
-           :sek SEK-last
-           :eur EUR-last
-           :jpy JPY-last}
-     }))
-
-(def unit-set 
-  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) conversion-map))))
+(defn unit-set []
+  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) @the-conversion-map))))
 
 
 (defrecord Quantity [value unit])
@@ -62,12 +57,12 @@
                 (cons from-unit up)
                 (recur (rest units)))))))))
   ([from-unit to-unit]
-    (unit-path-of from-unit to-unit conversion-map)))
+    (unit-path-of from-unit to-unit @the-conversion-map)))
 
 (defn path->fns [units]
   (if (> (count units) 1)
      (cons 
-       (to-fn-of conversion-map (first units) (second units)) 
+       (to-fn-of @the-conversion-map (first units) (second units)) 
        (path->fns (rest units)))
      []))
 
@@ -86,26 +81,32 @@
 (defn convert 
   [q to-unit]
     (let [from-unit (:unit q)
-          to-fn (to-fn-of conversion-map from-unit to-unit)
+          to-fn (to-fn-of @the-conversion-map from-unit to-unit)
           to-fn (if to-fn to-fn (to-indirect-fn q to-unit))]
-            (* (:value q) (to-fn))))
+            (Quantity. (* (:value q) (to-fn)) to-unit)))
 
-(defn do-arith 
+(defn do-add-sub 
   ([op q1] q1)
   ([op q1 q2]
   (let [u1 (:unit q1)
         u2 (:unit q2)]
-    (Quantity. (op (:value q1) (if (= u1 u2) (:value q2) (convert q2 u1))) u1)))
+    (Quantity. (op 
+                 (:value q1) 
+                 (:value (if (= u1 u2) q2 (convert q2 u1)))) 
+               u1)))
   ([op q1 q2 & args]
-    (reduce (fn [acc v] (add acc v)) (add q1 q2) args))
+    (reduce (fn [acc v] (do-add-sub op acc v)) (do-add-sub op q1 q2) args))
   )
+
+(defn do-mul-div [op args]
+  (let [q (first args)]
+    (->Quantity (apply * (cons (:value q) (rest args))) (:unit q))))
   
-  
-(defn apply-op [op args] (apply (partial do-arith op) args))
+(defn apply-op [op args] (apply (partial do-add-sub op) args))
 (defn add [& args] (apply-op + args))
 (defn sub [& args] (apply-op - args))
-(defn mul [& args] (apply-op * args))
-(defn div [& args] (apply-op / args))
+(defn mul [& args] (do-mul-div * args))
+(defn div [& args] (do-mul-div / args))
   
 
 
