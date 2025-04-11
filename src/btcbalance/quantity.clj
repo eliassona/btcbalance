@@ -41,28 +41,28 @@
 
 (defrecord Quantity [value unit])
 
-(defn to-fn-of [c-map from-unit to-unit]
-  (-> c-map (get from-unit) (get to-unit)))
+(defn to-fn-of [from-unit to-unit]
+  (-> @the-conversion-map (get from-unit) (get to-unit)))
 
 (defn unit-path-of 
-  ([from-unit to-unit cm]
-    (let [units (into #{} (-> cm from-unit keys))]
+  ([from-unit to-unit visited-units]
+    (let [units (apply disj (into #{} (-> @the-conversion-map from-unit keys)) visited-units)]
+      (if (empty? units)
+        nil
       (if (contains? units to-unit)
         [from-unit to-unit]
-        (let [cm (dissoc cm from-unit)]
-          (loop [us units]
-            (if (empty? us)
-              nil
-              (if-let [up (unit-path-of (first us) to-unit cm)]
-                (cons from-unit up)
-                (recur (rest units)))))))))
-  ([from-unit to-unit]
-    (unit-path-of from-unit to-unit @the-conversion-map)))
+        (loop [us units]
+          (if (empty? us)
+            nil
+            (if-let [up (unit-path-of (first us) to-unit (conj visited-units (first us)))]
+              (cons from-unit up)
+              (recur (rest us)))))))))
+  ([from-unit to-unit] (unit-path-of from-unit to-unit #{from-unit})))
 
 (defn path->fns [units]
   (if (> (count units) 1)
      (cons 
-       (to-fn-of @the-conversion-map (first units) (second units)) 
+       (to-fn-of (first units) (second units)) 
        (path->fns (rest units)))
      []))
 
@@ -81,7 +81,7 @@
 (defn convert 
   [q to-unit]
     (let [from-unit (:unit q)
-          to-fn (to-fn-of @the-conversion-map from-unit to-unit)
+          to-fn (to-fn-of from-unit to-unit)
           to-fn (if to-fn to-fn (to-indirect-fn q to-unit))]
             (Quantity. (* (:value q) (to-fn)) to-unit)))
 
@@ -107,6 +107,9 @@
 (defn sub [& args] (apply-op - args))
 (defn mul [& args] (do-mul-div * args))
 (defn div [& args] (do-mul-div / args))
+(defn rate [from-unit to-unit]
+  (to-indirect-fn (->Quantity 1 from-unit) to-unit)
+  )
   
 
 
