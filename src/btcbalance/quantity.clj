@@ -30,23 +30,20 @@
       x)
     ))
 
-(def the-conversion-map (atom {}))
-
-(defn set-conversion-map! [m]
-  (reset! the-conversion-map (inv-of m)))
-
-(defn unit-set []
-  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) @the-conversion-map))))
+(defn unit-set [cm]
+  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) cm))))
 
 
 (defrecord Quantity [value unit])
+(defn quantity [value unit]
+  (->Quantity value unit))
 
-(defn to-fn-of [from-unit to-unit]
-  (-> @the-conversion-map (get from-unit) (get to-unit)))
+(defn to-fn-of [cm from-unit to-unit]
+  (-> cm (get from-unit) (get to-unit)))
 
 (defn unit-path-of 
-  ([from-unit to-unit visited-units]
-    (let [units (apply disj (into #{} (-> @the-conversion-map from-unit keys)) visited-units)]
+  ([cm from-unit to-unit visited-units]
+    (let [units (apply disj (into #{} (-> cm from-unit keys)) visited-units)]
       (if (empty? units)
         nil
       (if (contains? units to-unit)
@@ -54,61 +51,61 @@
         (loop [us units]
           (if (empty? us)
             nil
-            (if-let [up (unit-path-of (first us) to-unit (conj visited-units (first us)))]
+            (if-let [up (unit-path-of cm (first us) to-unit (conj visited-units (first us)))]
               (cons from-unit up)
               (recur (rest us)))))))))
-  ([from-unit to-unit] (unit-path-of from-unit to-unit #{from-unit})))
+  ([cm from-unit to-unit] (unit-path-of cm from-unit to-unit #{from-unit})))
 
-(defn path->fns [units]
+(defn path->fns [cm units]
   (if (> (count units) 1)
      (cons 
-       (to-fn-of (first units) (second units)) 
-       (path->fns (rest units)))
+       (to-fn-of cm (first units) (second units)) 
+       (path->fns cm (rest units)))
      []))
 
 (defn indirect-fn-of [fns]
   (fn [] (reduce (fn [acc v] (* acc (v))) 1 fns)))
 
-(defn to-indirect-fn [q to-unit]
+(defn to-indirect-fn [cm q to-unit]
   (let [from-unit (:unit q)]
-    (if-let [units (unit-path-of from-unit to-unit)]
-      (let [fns (path->fns units)]
+    (if-let [units (unit-path-of cm from-unit to-unit)]
+      (let [fns (path->fns cm units)]
         (indirect-fn-of fns))
       (throw 
         (IllegalArgumentException. 
           (format "Unit %s cannot be converted to %s" from-unit to-unit))))))       
 
 (defn convert 
-  [q to-unit]
+  [cm q to-unit]
     (let [from-unit (:unit q)
-          to-fn (to-fn-of from-unit to-unit)
-          to-fn (if to-fn to-fn (to-indirect-fn q to-unit))]
+          to-fn (to-fn-of cm from-unit to-unit)
+          to-fn (if to-fn to-fn (to-indirect-fn cm q to-unit))]
             (Quantity. (* (:value q) (to-fn)) to-unit)))
 
 (defn do-add-sub 
-  ([op q1] q1)
-  ([op q1 q2]
+  ([cm op q1] q1)
+  ([cm op q1 q2]
   (let [u1 (:unit q1)
         u2 (:unit q2)]
     (Quantity. (op 
                  (:value q1) 
-                 (:value (if (= u1 u2) q2 (convert q2 u1)))) 
+                 (:value (if (= u1 u2) q2 (convert cm q2 u1)))) 
                u1)))
-  ([op q1 q2 & args]
-    (reduce (fn [acc v] (do-add-sub op acc v)) (do-add-sub op q1 q2) args))
+  ([cm op q1 q2 & args]
+    (reduce (fn [acc v] (do-add-sub cm op acc v)) (do-add-sub cm op q1 q2) args))
   )
 
 (defn do-mul-div [op args]
   (let [q (first args)]
-    (->Quantity (apply * (cons (:value q) (rest args))) (:unit q))))
+    (->Quantity (apply op (cons (:value q) (rest args))) (:unit q))))
   
-(defn apply-op [op args] (apply (partial do-add-sub op) args))
-(defn add [& args] (apply-op + args))
-(defn sub [& args] (apply-op - args))
+(defn apply-op [cm op args] (apply (partial do-add-sub cm op) args))
+(defn add [cm & args] (apply-op cm + args))
+(defn sub [cm & args] (apply-op cm - args))
 (defn mul [& args] (do-mul-div * args))
 (defn div [& args] (do-mul-div / args))
-(defn rate [from-unit to-unit]
-  (:value (convert (->Quantity 1 from-unit) to-unit)))
+(defn rate [cm from-unit to-unit]
+  (:value (convert cm (quantity 1 from-unit) to-unit)))
   
 
 
