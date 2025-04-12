@@ -29,3 +29,8 @@
   (is (= (->Quantity 1/200 :btc) (convert (->Quantity 1 :gold) :btc)))
   (is (= (->Quantity 200 :gold) (convert (->Quantity 1 :btc) :gold)))
   ) 
+(deftest test-rate
+  (is (= 1000 (rate :btc :usd)))
+  (is (= 1/1000 (rate :usd :btc)))
+  )
+

@@ -108,8 +108,7 @@
 (defn mul [& args] (do-mul-div * args))
 (defn div [& args] (do-mul-div / args))
 (defn rate [from-unit to-unit]
-  (to-indirect-fn (->Quantity 1 from-unit) to-unit)
-  )
+  (:value (convert (->Quantity 1 from-unit) to-unit)))
   
 
 
