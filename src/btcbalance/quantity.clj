@@ -77,10 +77,12 @@
 
 (defn convert 
   [cm q to-unit]
-    (let [from-unit (:unit q)
-          to-fn (to-fn-of cm from-unit to-unit)
-          to-fn (if to-fn to-fn (to-indirect-fn cm q to-unit))]
-            (Quantity. (* (:value q) (to-fn)) to-unit)))
+    (let [from-unit (:unit q)]
+      (if (= from-unit to-unit)
+        q
+        (let [to-fn (to-fn-of cm from-unit to-unit)
+              to-fn (if to-fn to-fn (to-indirect-fn cm q to-unit))]
+          (Quantity. (* (:value q) (to-fn)) to-unit)))))
 
 (defn do-add-sub 
   ([cm op q1] q1)
@@ -100,12 +102,25 @@
     (->Quantity (apply op (cons (:value q) (rest args))) (:unit q))))
   
 (defn apply-op [cm op args] (apply (partial do-add-sub cm op) args))
+
 (defn add [cm & args] (apply-op cm + args))
+
 (defn sub [cm & args] (apply-op cm - args))
+
 (defn mul [& args] (do-mul-div * args))
+
 (defn div [& args] (do-mul-div / args))
+
 (defn rate [cm from-unit to-unit]
   (:value (convert cm (quantity 1 from-unit) to-unit)))
   
+(defn do-comparator [cm op q1 q2]
+  (op (:value q1) (:value (convert cm q2 (:unit q1)))))
 
+(defn gt [cm q1 q2] (do-comparator cm > q1 q2))
+(defn gte [cm q1 q2] (do-comparator cm <= q1 q2))
+(defn lt [cm q1 q2] (do-comparator cm < q1 q2))
+(defn lte [cm q1 q2] (do-comparator cm <= q1 q2))
+(defn eq [cm q1 q2] (do-comparator cm = q1 q2))
+(defn not-eq [cm q1 q2] (do-comparator cm not= q1 q2))
 

@@ -21,7 +21,8 @@
   (is (= [:btc :usd :gold] (unit-path-of cm :btc :gold)))
   )
 
-(deftest test_convert
+(deftest test-convert
+  (is (= (quantity 1 :btc) (convert cm (quantity 1 :btc) :btc)))
   (is (= (quantity 1000 :usd) (convert cm (quantity 1 :btc) :usd)))
   (is (= (quantity 1 :btc) (convert cm (quantity 1000 :usd) :btc)))
   (is (= (quantity 1 :btc) (convert cm (quantity 10000 :sek) :btc)))
@@ -34,7 +35,7 @@
   (is (= 1000 (rate cm :btc :usd)))
   (is (= 1/1000 (rate cm :usd :btc)))
   )
-(deftest test-add
+(deftest test-add-sub-mul-div
   (is (= (quantity 2 :btc) (add cm (quantity 1 :btc) (quantity 1 :btc))))
   (is (= (quantity 10001 :sek) (add cm (quantity 1 :sek) (quantity 1 :btc))))
   (is (= (quantity 0 :btc) (sub cm (quantity 1 :btc) (quantity 1 :btc))))
@@ -45,4 +46,9 @@
   (is (= (quantity 2 :sek) (div (quantity 10 :sek) 5)))
   )
   
-
+(deftest test-comparators
+  (is (= true (gt cm (quantity 2 :sek) (quantity 1 :sek))))
+  (is (= false (gt cm (quantity 1 :sek) (quantity 2 :sek))))
+  (is (= true (gt cm (quantity 1 :btc) (quantity 2 :sek))))
+  
+  )
