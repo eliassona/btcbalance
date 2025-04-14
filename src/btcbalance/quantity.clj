@@ -1,12 +1,8 @@
-(ns btcbalance.quantity
-  (:require [bchain.core :refer [SEK SEK-last USD USD-last EUR-last JPY-last satoshi]])  
-  )
+(ns btcbalance.quantity)
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
      x#))
-
-
 
 (defn inv-fn-of [the-fn]
   (fn [] (/ 1 (the-fn))))

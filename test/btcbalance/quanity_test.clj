@@ -41,7 +41,7 @@
   (is (= (quantity 0 :btc) (sub cm (quantity 1 :btc) (quantity 1 :btc))))
   (is (= (quantity -9999 :sek) (sub cm (quantity 1 :sek) (quantity 1 :btc))))
   (is (= (quantity 1 :btc) (mul (quantity 1 :btc) 1)))
-  (is (= (quantity 2 :sek) (mul (quantity 1 :sek) 2)))
+  (is (= (quantity 4 :sek) (mul (quantity 1 :sek) 2 2)))
   (is (= (quantity 1 :btc) (div (quantity 1 :btc) 1)))
   (is (= (quantity 2 :sek) (div (quantity 10 :sek) 5)))
   )

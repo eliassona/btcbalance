@@ -11,5 +11,6 @@
                  [com.draines/postal "2.0.2"]
                  [org.clojure/tools.nrepl "0.2.13"]
                  [clj-http "3.12.3"]
+                 [cheshire "5.11.0"]
                  [hickory "0.7.1"]]
   :java-source-paths ["java/src"])
