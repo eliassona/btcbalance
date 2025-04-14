@@ -47,7 +47,7 @@
       (println msg)))) 
     
 
-(def ^:dynamic dir (-> "btcorders" clojure.java.io/resource clojure.java.io/file))
+(def ^:dynamic dir (File. "/Users/anderseliasson/src/btcbalance/resources/btcorders"))
 
 ;https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-sek.en.html
 (def eur->sek-historical-rates-map
