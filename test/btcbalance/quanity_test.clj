@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [btcbalance.quantity :refer :all]))
 
-(def cm 
+(def rates 
   (inv-of 
     {:btc {:usd (fn [] 1000)
            :sek (fn [] 10000)
@@ -13,42 +13,45 @@
      :gold {:usd (fn [] 5)}
          }))
 
+(deftest test-valid-units
+  (is (= (into #{} (keys rates)) (unit-set rates))))
+
 (deftest test-path
-  (is (= [:usd :btc] (unit-path-of cm :usd :btc)))
-  (is (= [:btc :usd] (unit-path-of cm :btc :usd)))
-  (is (= [:sek :btc :usd] (unit-path-of cm :sek :usd)))
-  (is (= [:usd :btc :sek ] (unit-path-of cm :usd :sek)))
-  (is (= [:btc :usd :gold] (unit-path-of cm :btc :gold)))
+  (is (= [:usd :btc] (unit-path-of rates :usd :btc)))
+  (is (= [:btc :usd] (unit-path-of rates :btc :usd)))
+  (is (= [:sek :btc :usd] (unit-path-of rates :sek :usd)))
+  (is (= [:usd :btc :sek ] (unit-path-of rates :usd :sek)))
+  (is (= [:btc :usd :gold] (unit-path-of rates :btc :gold)))
   )
 
 (deftest test-convert
-  (is (= (quantity 1 :btc) (convert cm (quantity 1 :btc) :btc)))
-  (is (= (quantity 1000 :usd) (convert cm (quantity 1 :btc) :usd)))
-  (is (= (quantity 1 :btc) (convert cm (quantity 1000 :usd) :btc)))
-  (is (= (quantity 1 :btc) (convert cm (quantity 10000 :sek) :btc)))
-  (is (= (quantity 5 :usd) (convert cm (quantity 1 :gold) :usd)))
-  (is (= (quantity 1 :gold) (convert cm (quantity 5 :usd) :gold)))
-  (is (= (quantity 1/200 :btc) (convert cm (quantity 1 :gold) :btc)))
-  (is (= (quantity 200 :gold) (convert cm (quantity 1 :btc) :gold)))
+  (is (= (q 1 :btc) (convert rates (q 1 :btc) :btc)))
+  (is (= (q 1000 :usd) (convert rates (q 1 :btc) :usd)))
+  (is (= (q 1 :btc) (convert rates (q 1000 :usd) :btc)))
+  (is (= (q 1 :btc) (convert rates (q 10000 :sek) :btc)))
+  (is (= (q 5 :usd) (convert rates (q 1 :gold) :usd)))
+  (is (= (q 1 :gold) (convert rates (q 5 :usd) :gold)))
+  (is (= (q 1/200 :btc) (convert rates (q 1 :gold) :btc)))
+  (is (= (q 200 :gold) (convert rates (q 1 :btc) :gold)))
   ) 
 (deftest test-rate
-  (is (= 1000 (rate cm :btc :usd)))
-  (is (= 1/1000 (rate cm :usd :btc)))
+  (is (= 1000 (rate rates :btc :usd)))
+  (is (= 1/1000 (rate rates :usd :btc)))
   )
 (deftest test-add-sub-mul-div
-  (is (= (quantity 2 :btc) (add cm (quantity 1 :btc) (quantity 1 :btc))))
-  (is (= (quantity 10001 :sek) (add cm (quantity 1 :sek) (quantity 1 :btc))))
-  (is (= (quantity 0 :btc) (sub cm (quantity 1 :btc) (quantity 1 :btc))))
-  (is (= (quantity -9999 :sek) (sub cm (quantity 1 :sek) (quantity 1 :btc))))
-  (is (= (quantity 1 :btc) (mul (quantity 1 :btc) 1)))
-  (is (= (quantity 4 :sek) (mul (quantity 1 :sek) 2 2)))
-  (is (= (quantity 1 :btc) (div (quantity 1 :btc) 1)))
-  (is (= (quantity 2 :sek) (div (quantity 10 :sek) 5)))
+  (is (= (q 2 :btc) (add rates (q 1 :btc) (q 1 :btc))))
+  (is (= (q 10001 :sek) (add rates (q 1 :sek) (q 1 :btc))))
+  (is (= (q 0 :btc) (sub rates (q 1 :btc) (q 1 :btc))))
+  (is (= (q -9999 :sek) (sub rates (q 1 :sek) (q 1 :btc))))
+  (is (= (q 1 :btc) (mul (q 1 :btc) 1)))
+  (is (= (q 4 :sek) (mul (q 1 :sek) 2 2)))
+  (is (= (q 1 :btc) (div (q 1 :btc) 1)))
+  (is (= (q 2 :sek) (div (q 10 :sek) 5)))
   )
   
 (deftest test-comparators
-  (is (= true (gt cm (quantity 2 :sek) (quantity 1 :sek))))
-  (is (= false (gt cm (quantity 1 :sek) (quantity 2 :sek))))
-  (is (= true (gt cm (quantity 1 :btc) (quantity 2 :sek))))
+  (is (= true (gt rates (q 2 :sek) (q 1 :sek))))
+  (is (= false (gt rates (q 1 :sek) (q 2 :sek))))
+  (is (= true (gt rates (q 1 :btc) (q 2 :sek))))
   
   )
