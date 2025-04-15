@@ -27,11 +27,11 @@
     ))
 
 (defn unit-set [cm]
-  (into #{} (flatten (map (fn [e] [(key e) (-> e val keys)]) cm))))
+  (into #{} (keys cm)))
 
 
 (defrecord Quantity [value unit])
-(defn quantity [value unit]
+(defn q [value unit]
   (->Quantity value unit))
 
 (defn to-fn-of [cm from-unit to-unit]
@@ -108,7 +108,7 @@
 (defn div [& args] (do-mul-div / args))
 
 (defn rate [cm from-unit to-unit]
-  (:value (convert cm (quantity 1 from-unit) to-unit)))
+  (:value (convert cm (q 1 from-unit) to-unit)))
   
 (defn do-comparator [cm op q1 q2]
   (op (:value q1) (:value (convert cm q2 (:unit q1)))))
