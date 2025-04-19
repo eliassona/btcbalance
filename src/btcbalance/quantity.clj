@@ -114,7 +114,7 @@
   (op (:value q1) (:value (convert cm q2 (:unit q1)))))
 
 (defn gt [cm q1 q2] (do-comparator cm > q1 q2))
-(defn gte [cm q1 q2] (do-comparator cm <= q1 q2))
+(defn gte [cm q1 q2] (do-comparator cm >= q1 q2))
 (defn lt [cm q1 q2] (do-comparator cm < q1 q2))
 (defn lte [cm q1 q2] (do-comparator cm <= q1 q2))
 (defn eq [cm q1 q2] (do-comparator cm = q1 q2))
