@@ -85,10 +85,7 @@
   [ix n back-in-days] 
   (map (fn [x] (moving-average-of (+ ix x) n)) (range back-in-days)))
 
-(defn worst-month [value years]
-  (let [ma (map (fn [[v1 v2]] (/ v1 v2)) (partition 2 (moving-averages-of 0 (* 200 7) (* years 365))))
-        m (growth value (* (- (apply min ma) 1) 100) 30)]
-    (- (-> m first first) (-> m last first))))
+
 
 
 (defn rising? [data]
@@ -187,6 +184,11 @@
   ([value percent years]
     (let [factor (/ percent 100)]
       (reduce (partial growth-fn factor) [[value 0]] (range 1 (inc years))))))
+
+(defn worst-month [value years]
+  (let [ma (map (fn [[v1 v2]] (/ v1 v2)) (partition 2 (moving-averages-of 0 (* 200 7) (* years 365))))
+        m (growth value (* (- (apply min ma) 1) 100) 30)]
+    (- (-> m first first) (-> m last first))))
 
 (defn growth-goal [value percent years]
   (-> (growth value percent years) first first))
