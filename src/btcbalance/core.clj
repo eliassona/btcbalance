@@ -354,4 +354,24 @@
 (defn egg-30 [] (sats-price 125))
 (defn gas [] (sats-price 17))
 
+(defn update-dest-unit [ratio [k v]]
+  (dbg [k (/ v ratio)]))
+
+(defn update-dest-units [ratio m]
+  (dbg (into {} (map (partial update-dest-unit ratio) (dbg m)))))
+
+(defn update-stock [ticker ratio m]
+  (update-in (dbg m) [1 ticker] (partial update-dest-units ratio)))
+
+(defn stock-split [rates ticker ratio index]
+  (concat 
+    (take index rates) 
+    (map (partial update-stock ticker ratio)  (drop index rates))))
+
+
+
+
+
+
+
 
