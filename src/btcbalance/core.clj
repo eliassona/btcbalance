@@ -355,13 +355,13 @@
 (defn gas [] (sats-price 17))
 
 (defn update-dest-unit [ratio [k v]]
-  (dbg [k (/ v ratio)]))
+  [k (/ v ratio)])
 
 (defn update-dest-units [ratio m]
-  (dbg (into {} (map (partial update-dest-unit ratio) (dbg m)))))
+  (into {} (map (partial update-dest-unit ratio) m)))
 
 (defn update-stock [ticker ratio m]
-  (update-in (dbg m) [1 ticker] (partial update-dest-units ratio)))
+  (update-in m [1 ticker] (partial update-dest-units ratio)))
 
 (defn stock-split [rates ticker ratio index]
   (concat 
