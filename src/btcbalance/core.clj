@@ -56,6 +56,15 @@
     (map split-it 
          (.split (slurp bhd-file) "\n")))
 
+(defn date->index [date]
+  (let [r (range (count raw-btc-price))]
+    (loop [r r]
+      (when-let [ix (first r)]
+        (if (= (first (nth raw-btc-price ix)) date)
+          ix
+          (recur (rest r)))))))
+
+
 (defn curr-ticket []
   (format "\"%s\", \"%s\"" (.format date-template (java.util.Date.)) (USD-last))
   )
