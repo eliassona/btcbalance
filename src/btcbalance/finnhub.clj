@@ -8,7 +8,9 @@
   (let [url "https://finnhub.io/api/v1/quote"
         params {:query-params
                 {"symbol" symbol
-                 "token" api-key}}]
+                 "token" api-key}
+                :socket-timeout 1000  
+                :connection-timeout 1000}]
     (try
       (let [response (http/get url params)
             body (json/parse-string (:body response) true)]
