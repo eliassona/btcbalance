@@ -15,4 +15,5 @@
                  [hickory "0.7.1"]
                  [dev.langchain4j/langchain4j-open-ai "1.0.1"]
                  ]
-  :java-source-paths ["java/src"])
+  :java-source-paths ["java/src"]
+  :repl-options {:init-ns btcbalance.secure.assets})

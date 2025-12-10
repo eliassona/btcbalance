@@ -60,7 +60,12 @@
      []))
 
 (defn indirect-fn-of [fns]
-  (fn [] (reduce (fn [acc v] (* acc (v))) 1 fns)))
+  (fn []
+    (reduce
+      (fn [acc v]
+        (* acc (v)))
+      1
+      fns)))
 
 (defn to-indirect-fn [cm q to-unit]
   (let [from-unit (:unit q)]

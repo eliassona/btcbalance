@@ -1,3 +1,11 @@
 /bin/
 /src/btcbalance/secure
 /resources/btcorders
+/.DS_Store
+/.calva
+/.clj-kondo
+/.idea
+/.lein-repl-history
+/.lsp
+/.nrepl-port
+/resources/.DS_Store
